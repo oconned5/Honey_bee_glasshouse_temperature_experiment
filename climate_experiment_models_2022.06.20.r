@@ -45,7 +45,7 @@ hist(dframe2$bees_out)
 
 
 library(lme4)
-final.model1 <- glmer(bees_out  ~                 # the dependent vaiable
+final.model1 <- glmer(bees_out  ~                 # the dependent variable
                         temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
                         date_julian + 
                         (1|hive),                # the random term 
@@ -109,7 +109,7 @@ library(sjPlot)
 
 
 
-## Predicted probabilities of nests being in Nestboxes
+## 
 
 ff1 <- theme_set(theme_bw())
 ff2 <- plot_model(final.model1, type = "pred", terms = c("temperature_glasshouse_ibutton_01", "Replicate"))
@@ -198,7 +198,7 @@ hist(dframe2$temperature_C_hive_ibutton_01)  ## fairly normally distributed
 
 library(lme4)
 library(lmerTest)
-final.model2 <- lmer(temperature_C_hive_ibutton_01  ~                 # the dependent vaiable
+final.model2 <- lmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
                        temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
                        date_julian + 
                        (1|hive),                # the random term 
@@ -357,7 +357,7 @@ hist(dframe3$humidity_percentage_hive_ibutton_01)
 
 library(lme4)
 library(lmerTest)
-final.model3 <- lmer(humidity_percentage_hive_ibutton_01  ~                 # the dependent vaiable
+final.model3 <- lmer(humidity_percentage_hive_ibutton_01  ~                 # the dependent variable
                        temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
                        date_julian + 
                        (1|hive),                # the random term 
