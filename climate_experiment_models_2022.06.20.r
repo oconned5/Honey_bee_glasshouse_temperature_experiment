@@ -1,5 +1,5 @@
 ########################################################################################
-# Analyses of 15 years glasshouse experiment, measuring the effect of temperature 
+# Analyses of glasshouse experiment data, measuring the effect of temperature 
 # on honey bee movement and brood maintenance
 
 
