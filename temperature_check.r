@@ -30,23 +30,23 @@ summary(dframe1)
 library(ggplot2)
 library(tidyr)
 
-dframe3 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_setting == "day" &
+dframe4 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_setting == "day" &
                     temperature_glasshouse_ibutton_01 != "NA", 
                   select=c(date_julian, unix_timestamp, treatment_temperature_C, temperature_glasshouse_ibutton_01))
 
-dframe4 <- pivot_longer(dframe3, cols=3:4, names_to = "category", values_to = "temperature")
+dframe5 <- pivot_longer(dframe4, cols=3:4, names_to = "category", values_to = "temperature")
 
 
 ## by day
 
-ff1 <- ggplot(dframe4, aes(date_julian, temperature, colour = category)) +
+ff1 <- ggplot(dframe5, aes(date_julian, temperature, colour = category)) +
   geom_point() +
   geom_smooth(method = "loess") # + ylim(0, 2.5)
 ff2 <- ff1 + theme(panel.grid.major = element_blank(),
                    panel.grid.minor = element_blank()) +
   theme(panel.background = element_blank())
 ff3 <- ff2 + ylab("Temperature")
-ff4 <- ff3 + xlab("Date")
+ff4 <- ff3 + xlab("Julian date")
 ff5 <- ff4 + theme(axis.line = element_line(colour = "black"))
 ff6 <- ff5 + scale_color_manual(values=c("black", "red"))
 ff7 <- ff6 + theme(axis.title.y=element_text(face="bold", size=15, vjust=1.5))
@@ -72,7 +72,7 @@ dev.off()
 
 ## by ~ 5 minutes intervals
 
-dframe5 <- subset(dframe4, unix_timestamp != "NA")
+dframe6 <- subset(dframe5, unix_timestamp != "NA")
 
 
 hh1 <- ggplot(dframe5, aes(unix_timestamp, temperature, colour = category)) +
