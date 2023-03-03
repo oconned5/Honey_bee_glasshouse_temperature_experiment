@@ -23,33 +23,17 @@ graphics.off() # close all open graphics windows
 #install.packages("MASS")
 #install.packages("dplyr")
 #install.packages("tidyr")
-#install.packages("devtools")
-#install.packages("glmmTMB")
 
-
-### write function to calculate overdispersion
-
-library(dplyr)
-library(tidyr)
-overdisp_fun <- function(model) {vpars <- function (m)
-{nrow(m)*(nrow(m) + 1)/2}
-model.df <- sum(sapply(VarCorr(model), vpars)) +
-  length(fixef(model))
-rdf <- nrow(model.frame(model)) -model.df
-rp <- residuals(model, type="pearson")
-Pearson.chisq <- sum(rp^2)
-prat <- Pearson.chisq/rdf
-pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE)
-c(chisq=Pearson.chisq, ratio=prat, rdf=rdf, p=pval)}
 
 
 #################################################################################
 
-
+## read in the data
 dframe1 <- read.csv(file.choose())    # Select "Glasshouse_experiment_database"
 head(dframe1)
 summary(dframe1)
 
+## subset out the experimental period, during the day, when data was recorded
 dframe2 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_setting == "day" &
                     bees_out != "NA" & temperature_glasshouse_ibutton_01 != "NA")
 
@@ -61,7 +45,27 @@ dframe2 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_settin
 # Relationship between worker movement and glasshouse temperature
 # plus Replicate, and date, with hive as a random term
 
-hist(dframe2$bees_out) 
+# examine the response variable
+hist(dframe2$bees_out) ## count data with a poisson or negative binomial style distribution
+
+# examine the continuous explanatory variable 
+hist(dframe2$temperature_glasshouse_ibutton_01)  # quite normally distributed
+
+## as we'll be dealing with poisson models it's important to check overdispersion
+### write function to calculate overdispersion
+
+library(dplyr)
+library(tidyr)
+overdisp_fun <- function(model) {vpars <- function (m)    ## run in one block
+{nrow(m)*(nrow(m) + 1)/2}
+model.df <- sum(sapply(VarCorr(model), vpars)) +
+  length(fixef(model))
+rdf <- nrow(model.frame(model)) -model.df
+rp <- residuals(model, type="pearson")
+Pearson.chisq <- sum(rp^2)
+prat <- Pearson.chisq/rdf
+pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE)
+c(chisq=Pearson.chisq, ratio=prat, rdf=rdf, p=pval)}
 
 #################################################################
 
@@ -74,16 +78,15 @@ hist(dframe2$bees_out)
 ### log link function
 
 library(lme4)
-global.model1a <- glmer(bees_out  ~                 # the dependent variable
-                        temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                        date_julian + 
-                        (1|hive),                # the random term 
+global.model1a <- glmer(bees_out  ~                          # count dependent variable
+                        temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
+                          Replicate +                          # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                          (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                       na.action = na.pass,
                       family = "poisson" (link="log"), data = dframe2) # poisson model of count data 
 
 summary(global.model1a) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-
 
 # Standardise the global model's parameters so that SD = 0.5,
 # to make them directly comparable despite them being measured on different scales
@@ -93,49 +96,43 @@ stdz.global.model1a <- standardize(global.model1a, standardize.y = FALSE)
 #adjusts variables going in so the parameter estimates will be comparable
 summary(stdz.global.model1a)
 
+## assess the full global model to see whether it's worth dropping terms
+library(MuMIn)
+model.set1a <- dredge(stdz.global.model1a)
+model.set1a    ## the full model comes out as the best
+
 
 # R-squared 
-
 library(MuMIn)
 r.squaredGLMM(stdz.global.model1a)
 
-## model validation
+## check the residuals
 
 library(LMERConvenienceFunctions)
 mcp.fnc(stdz.global.model1a) # plots of model fit
 plot(stdz.global.model1a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
-
 sresid <- resid(stdz.global.model1a, type = "pearson")
 hist(sresid)
 
-fits <- fitted(stdz.global.model1a)
-plot(sresid ~ fits)
-
-
 ## overdispersion
-overdisp_fun(stdz.global.model1a)
+overdisp_fun(stdz.global.model1a)   ### this mode has overdispersion >2, try another model
 
-theta <- stdz.global.model1a$deviance / stdz.global.model1a$df.residual
-theta
 
-library(MuMIn)
-model.set1a <- dredge(stdz.global.model1a)
-model.set1a
 
 ### sqrt link function
 
 library(lme4)
-global.model1b <- glmer(bees_out  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          date_julian + 
-                          (1|hive),                # the random term 
+library(lme4)
+global.model1b <- glmer(bees_out  ~                           # count dependent variable
+                          temperature_glasshouse_ibutton_01 + # continuous explanatory variable
+                          Replicate +                          # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                          (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                         na.action = na.pass,
                         family = "poisson" (link="sqrt"), data = dframe2) # poisson model of count data 
 
 summary(global.model1b) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-
 
 # Standardise the global model's parameters so that SD = 0.5,
 # to make them directly comparable despite them being measured on different scales
@@ -145,64 +142,59 @@ stdz.global.model1b <- standardize(global.model1b, standardize.y = FALSE)
 #adjusts variables going in so the parameter estimates will be comparable
 summary(stdz.global.model1b)
 
+## assess the full global model to see whether it's worth dropping terms
+library(MuMIn)
+model.set1b <- dredge(stdz.global.model1b)
+model.set1b    ## the full model comes out as the best
+
 
 # R-squared 
-
 library(MuMIn)
 r.squaredGLMM(stdz.global.model1b)
 
-## model validation
+## check the residuals
 
 library(LMERConvenienceFunctions)
 mcp.fnc(stdz.global.model1b) # plots of model fit
 plot(stdz.global.model1b, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
-
 sresid <- resid(stdz.global.model1b, type = "pearson")
 hist(sresid)
 
-fits <- fitted(stdz.global.model1b)
-plot(sresid ~ fits)
+## overdispersion
+overdisp_fun(stdz.global.model1b)   ### this mode has overdispersion >2, try another model
 
-## calculate overdispersion
-overdisp_fun(stdz.global.model1b)
 
-library(MuMIn)
-model.set1b <- dredge(stdz.global.model1b)
-model.set1b
-
-### identity link function - fails 
+### identity link function - fails, identity link not appropriate
 
 library(lme4)
-global.model1c <- glmer(bees_out  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          date_julian + 
-                          (1|hive),                # the random term 
+global.model1c <- glmer(bees_out  ~                           # count dependent variable
+                          temperature_glasshouse_ibutton_01 + # continuous explanatory variable
+                          Replicate +                          # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                          (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                         na.action = na.pass,
                         family = "poisson" (link="identity"), data = dframe2) # poisson model of count data 
-
 summary(global.model1c) 
 
 
 ### negative binomial family for count response----
 
-## All variables plus interactions model selection
-## carry out model selection with different link functions and compare for fit
+## as the poisson was overdispersed use negative binomial
 
-### negative bionomial with lme4
+### negative binomial with lme4
 
 library(lme4)
 library(MASS)
-global.model1d <- glmer.nb(bees_out  ~                 # the dependent variable
-                             temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                             date_julian + 
-                             (1|hive),                # the random term 
+global.model1d <- glmer.nb(bees_out  ~                            # count dependent variable
+                             temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
+                             Replicate +                          # fixed term
+                             temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                             (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                            na.action = na.pass, nAGQ = 1, 
-                           data = dframe2) # negative bionomial model of count data 
+                           data = dframe2)                       # negative bionomial model of count data 
 
 summary(global.model1d) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-
 
 # Standardise the global model's parameters so that SD = 0.5,
 # to make them directly comparable despite them being measured on different scales
@@ -212,6 +204,10 @@ stdz.global.model1d <- standardize(global.model1d, standardize.y = FALSE)
 #adjusts variables going in so the parameter estimates will be comparable
 summary(stdz.global.model1d)
 
+## assess the full global model to see whether it's worth dropping terms
+library(MuMIn)
+model.set1d <- dredge(stdz.global.model1d)
+model.set1d    ## the full model comes out as the best
 
 # R-squared 
 
@@ -228,63 +224,9 @@ plot(stdz.global.model1d, pch = 20, col = "black", lty = "dotted") # fitted valu
 sresid <- resid(stdz.global.model1d, type = "pearson")
 hist(sresid)
 
-fits <- fitted(stdz.global.model1d)
-plot(sresid ~ fits)
 
 ## calculate overdispersion
-overdisp_fun(stdz.global.model1d)
-
-library(MuMIn)
-model.set1d <- dredge(stdz.global.model1d)
-model.set1d
-
-
-### negative bionomial with lme4
-
-#### set hive to be a factor
-dframe2$hive <- as.factor(dframe2$hive)
-
-library(glmmADMB)
-global.model1e <- glmmadmb(bees_out  ~                 # the dependent variable
-                             temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                             date_julian + 
-                             (1|hive),                # the random term 
-                           family = "nbinom", link = "log",
-                           data = dframe2) # negative bionomial model of count data 
-
-summary(global.model1e) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-
-
-# Standardise the global model's parameters so that SD = 0.5,
-# to make them directly comparable despite them being measured on different scales
-
-
-# R-squared 
-
-library(rsq)
-rsq.glmm(global.model1e)
-
-## model validation
-
-library(LMERConvenienceFunctions)
-mcp.fnc(global.model1e) # plots of model fit
-plot(global.model1e, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-
-sresid <- resid(global.model1e, type = "pearson")
-hist(sresid)
-
-fits <- fitted(global.model1e)
-plot(sresid ~ fits)
-
-## calculate overdispersion
-overdisp_fun(global.model1e)
-
-library(MuMIn)
-model.set1e <- dredge(global.model1e)
-model.set1e
-
+overdisp_fun(stdz.global.model1d)  ## overdispersion back down to the 1-2 zone!
 
 
 
@@ -296,8 +238,8 @@ model.set1e
 # Relationship between hive temperature and glasshouse temperature
 # plus Replicate, and date, with hive as a random term
 
+## investigate distribution of response variable
 hist(dframe2$temperature_C_hive_ibutton_01)  ## fairly normally distributed
-hist(dframe2$temperature_glasshouse_ibutton_01) 
 
 
 #################################################################
@@ -341,10 +283,6 @@ hist(sresid)
 fits <- fitted(global.model2a)
 plot(sresid ~ fits)
 
-
-
-## overdispersion
-overdisp_fun(global.model2a)
 
 
 library(MuMIn)
@@ -433,9 +371,6 @@ fits <- fitted(global.model2d)
 plot(sresid ~ fits)
 
 
-## overdispersion
-overdisp_fun(global.model2d)
-
 
 library(MuMIn)
 model.set2d <- dredge(global.model2d)
@@ -495,18 +430,39 @@ write.csv(model.set2d, file = "model_2_gamma_identity.csv")
 # Relationship between hive humidity and glasshouse temperature
 # plus Replicate, and date, with hive as a random term
 
-hist(dframe2a$humidity_percentage_hive_ibutton_01)  ### long left-skewed tail
-hist(dframe2a$temperature_glasshouse_ibutton_01) 
+## lets have a look at our continuous variables
+hist(dframe2$humidity_percentage_hive_ibutton_01)  ### long negative left-skewed tail
+hist(dframe2$temperature_glasshouse_ibutton_01)   ## gaussian distribution
 
-## explore low values
+## explore low values for humidity
 df_explore <- subset(dframe2, humidity_percentage_hive_ibutton_01 <50)
-View(df_explore)                   ## all from one sensor, probably sensor failure                                               
+View(df_explore)                   ## all from one hive (hive_02), maybe a placement issues,
+                                   ## or equipment failure?                                              
 
+
+### is it the hive or the ibutton which is producing strangely low humidity numbers?
+## the ibutton was used on another hive (hive_25), lets check that 
+df_explore2 <- subset(dframe2, hive == "hive_25" & hive_ibutton_01 == "No.02")
+View(df_explore2) 
+hist(df_explore2$humidity_percentage_hive_ibutton_01)   #### a normal humidity distribution
+
+## so it's probably not the ibutton, is it the hive?
+df_explore3 <- subset(dframe2, hive == "hive_02" & hive_ibutton_01 == "No.02")
+View(df_explore3) 
+hist(df_explore3$humidity_percentage_hive_ibutton_01)  ### it's the hive
+
+## possibily there was an unkown issue with the hive
+## exclude it so as not to strongly skew the model
 dframe2a <- subset(dframe2, hive != "hive_02")
 
-hist(dframe2a$humidity_percentage_hive_ibutton_01)  ## now a normal distribution
-hist(dframe2a$temperature_glasshouse_ibutton_01) 
+hist(dframe2a$humidity_percentage_hive_ibutton_01)  ## still has a a negative skew, though not very dramatic
 
+## try a negative square root transformation for a moderate transformation to reduce the skew
+neg_sqrt_humidity <- sqrt(max(dframe2a$humidity_percentage_hive_ibutton_01+1) - dframe2a$humidity_percentage_hive_ibutton_01) 
+
+hist(neg_sqrt_humidity) ## success! the humidity data is no longer skewed
+
+hist(dframe2a$temperature_glasshouse_ibutton_01) 
 
 
 
@@ -522,11 +478,15 @@ hist(dframe2a$temperature_glasshouse_ibutton_01)
 
 
 library(lme4)
-global.model3a <- glmer(humidity_percentage_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
+global.model3a <- glmer(sqrt_humidity ~                 # the dependent variable
+                          temperature_glasshouse_ibutton_01
+                        + Replicate +   # fixed term
                           temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
                           (1|experiment_day) + (1|hive),                # the random term 
                         family = gaussian (link = identity),
+                        control=glmerControl(optimizer="Nelder_Mead",       
+                                             optCtrl=list(maxfun=2e5)),    # try Nelder_Mead, nloptwrap and bobyqa optimisers
+                        #for full model to aid convergence
                         na.action = na.pass,
                         data = dframe2a) # gaussian model of temperature data 
 
@@ -543,7 +503,7 @@ r.squaredGLMM(global.model3a)
 
 library(LMERConvenienceFunctions)
 mcp.fnc(global.model3a) # plots of model fit
-plot(global.model3a, pch = 30, col = "black", lty = "dotted") # fitted values against the residuals
+plot(global.model3a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
 
 sresid <- resid(global.model3a, type = "pearson")
@@ -552,10 +512,6 @@ hist(sresid)
 fits <- fitted(global.model3a)
 plot(sresid ~ fits)
 
-
-
-## overdispersion
-overdisp_fun(global.model3a)
 
 
 library(MuMIn)
@@ -684,7 +640,8 @@ global.model3f <- glmer(humidity_percentage_hive_ibutton_01  ~                  
                         na.action = na.pass,
                         data = dframe2a) # Gamma model of temperature data 
 
-summary(global.model3f) 
+summary(global.model3f)  ### scaling issues!!!
+
 
 
 
