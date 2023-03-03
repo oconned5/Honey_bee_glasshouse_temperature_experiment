@@ -107,9 +107,6 @@ library(MuMIn)
 r.squaredGLMM(stdz.global.model1a)
 
 ## check the residuals
-
-library(LMERConvenienceFunctions)
-mcp.fnc(stdz.global.model1a) # plots of model fit
 plot(stdz.global.model1a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
 sresid <- resid(stdz.global.model1a, type = "pearson")
@@ -153,9 +150,6 @@ library(MuMIn)
 r.squaredGLMM(stdz.global.model1b)
 
 ## check the residuals
-
-library(LMERConvenienceFunctions)
-mcp.fnc(stdz.global.model1b) # plots of model fit
 plot(stdz.global.model1b, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
 sresid <- resid(stdz.global.model1b, type = "pearson")
@@ -208,18 +202,15 @@ summary(stdz.global.model1d)
 library(MuMIn)
 model.set1d <- dredge(stdz.global.model1d)
 model.set1d    ## the full model comes out as the best
+write.csv(model.set1d, file = "model_1_negative_binomial.csv")
 
 # R-squared 
 
 library(MuMIn)
 r.squaredGLMM(stdz.global.model1d)
 
-## model validation
-
-library(LMERConvenienceFunctions)
-mcp.fnc(stdz.global.model1d) # plots of model fit
+## check residuals
 plot(stdz.global.model1d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
 
 sresid <- resid(stdz.global.model1d, type = "pearson")
 hist(sresid)
@@ -282,11 +273,7 @@ r.squaredGLMM(stdz.global.model2a)
 
 
 ## inspect residuals
-
-library(LMERConvenienceFunctions)
-mcp.fnc(stdz.global.model2a) # plots of model fit
 plot(stdz.global.model2a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
 
 sresid <- resid(stdz.global.model2a, type = "pearson")
 hist(sresid)
@@ -359,18 +346,11 @@ stdz.model.set2d           ## the full model comes out as the best
 
 
 # R-squared 
-
-library(MuMIn)
-r.squaredGLMM(stdz.global.model2d)
 library(rsq)
 rsq.glmm(stdz.global.model2d)
 
 ## inspect residuals
-
-library(LMERConvenienceFunctions)
-mcp.fnc(stdz.global.model2d) # plots of model fit
 plot(stdz.global.model2d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
 
 sresid <- resid(stdz.global.model2d, type = "pearson")
 hist(sresid)
@@ -432,7 +412,6 @@ write.csv(model.set2d, file = "model_2_gamma_identity.csv")
 
 ## lets have a look at our continuous variables
 hist(dframe2$humidity_percentage_hive_ibutton_01)  ### long negative left-skewed tail
-hist(dframe2$temperature_glasshouse_ibutton_01)   ## gaussian distribution
 
 ## explore low values for humidity
 df_explore <- subset(dframe2, humidity_percentage_hive_ibutton_01 <50)
@@ -451,7 +430,7 @@ df_explore3 <- subset(dframe2, hive == "hive_02" & hive_ibutton_01 == "No.02")
 View(df_explore3) 
 hist(df_explore3$humidity_percentage_hive_ibutton_01)  ### it's the hive
 
-## possibily there was an unkown issue with the hive
+## possibly there was an unknown issue with the hive
 ## exclude it so as not to strongly skew the model
 dframe2a <- subset(dframe2, hive != "hive_02")
 
@@ -462,8 +441,7 @@ neg_sqrt_humidity <- sqrt(max(dframe2a$humidity_percentage_hive_ibutton_01+1) - 
 
 hist(neg_sqrt_humidity) ## success! the humidity data is no longer skewed
 
-hist(dframe2a$temperature_glasshouse_ibutton_01) 
-
+hist(dframe2a$temperature_glasshouse_ibutton_01)  ## subsectioned temperature still has a normal distribution
 
 
 #################################################################
@@ -478,45 +456,40 @@ hist(dframe2a$temperature_glasshouse_ibutton_01)
 
 
 library(lme4)
-global.model3a <- glmer(sqrt_humidity ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01
-                        + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
+global.model3a <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
+                        temperature_glasshouse_ibutton_01 +             # interaction terms
+                        Replicate +                                     # fixed term
+                        temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                        (1|experiment_day) + (1|hive),                  # the random terms 
                         family = gaussian (link = identity),
-                        control=glmerControl(optimizer="Nelder_Mead",       
-                                             optCtrl=list(maxfun=2e5)),    # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        #for full model to aid convergence
+                        control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
+                                             optCtrl=list(maxfun=2e5)), 
                         na.action = na.pass,
-                        data = dframe2a) # gaussian model of temperature data 
+                        data = dframe2a)            # gaussian model of humidty data 
 
 summary(global.model3a) 
 
+library(arm)                                    
+stdz.global.model3a <- standardize(global.model3a, standardize.y = FALSE)
+#adjusts variables going in so the parameter estimates will be comparable
+summary(stdz.global.model3a)
+
+## assess the full global model to see whether it's worth dropping terms
+library(MuMIn)
+stdz.model.set3a <- dredge(global.model3a)
+stdz.model.set3a           ## the full model comes out as the best
 
 # R-squared 
-
 library(MuMIn)
 r.squaredGLMM(global.model3a)
 
 
-## model validation
-
-library(LMERConvenienceFunctions)
-mcp.fnc(global.model3a) # plots of model fit
+## check residuals
 plot(global.model3a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
 
 sresid <- resid(global.model3a, type = "pearson")
 hist(sresid)
 
-fits <- fitted(global.model3a)
-plot(sresid ~ fits)
-
-
-
-library(MuMIn)
-model.set3a <- dredge(global.model3a)
-model.set3a
 
 
 ### log link function ----
@@ -524,19 +497,18 @@ model.set3a
 ### doesn't converge even after altering optimizer
 
 library(lme4)
-global.model3b <- glmer(humidity_percentage_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
+global.model3b <- glmer(neg_sqrt_humidity ~                               # the dependent variable - neg. sqrt humidty
+                          temperature_glasshouse_ibutton_01 +             # interaction terms
+                          Replicate +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          (1|experiment_day) + (1|hive),                  # the random terms 
                         family = gaussian (link = log),
-                        #  control=glmerControl(optimizer="bobyqa",       
-                        #                      optCtrl=list(maxfun=3e5)), # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
+                      #  control=glmerControl(optimizer="Nelder_Mead",    # try Nelder_Mead, nloptwrap and bobyqa optimisers  
+                      #                      optCtrl=list(maxfun=2e5)), 
                         na.action = na.pass,
                         data = dframe2a) # gaussian model of temperature data 
 
 summary(global.model3b) 
-
 
 
 ### inverse link function ----
@@ -544,14 +516,14 @@ summary(global.model3b)
 ### doesn't converge even after altering optimizer
 
 library(lme4)
-global.model3c <- glmer(humidity_percentage_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
-                        family = gaussian (link = "inverse"),
-                        #  control=glmerControl(optimizer="bobyqa",       
-                        #                      optCtrl=list(maxfun=3e5)), # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
+global.model3c <- glmer(neg_sqrt_humidity ~                               # the dependent variable - neg. sqrt humidty
+                          temperature_glasshouse_ibutton_01 +             # interaction terms
+                          Replicate +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          (1|experiment_day) + (1|hive),                  # the random terms 
+                        family = gaussian (link = inverse),
+                        #  control=glmerControl(optimizer="Nelder_Mead",    # try Nelder_Mead, nloptwrap and bobyqa optimisers  
+                        #                      optCtrl=list(maxfun=2e5)), 
                         na.action = na.pass,
                         data = dframe2a) # gaussian model of temperature data 
 
@@ -566,58 +538,52 @@ summary(global.model3c)
 
 
 library(lme4)
-global.model3d <- glmer(humidity_percentage_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
-                        family = Gamma (link = identity),
-                        control=glmerControl(optimizer="bobyqa",       
-                                             optCtrl=list(maxfun=3e5)), #  bobyqa optimiser aids convergence
+global.model3d <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
+                          temperature_glasshouse_ibutton_01 +             # interaction terms
+                          Replicate +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          (1|experiment_day) + (1|hive),                  # the random terms 
+                        family = Gamma (link = identity),                 
+                        control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
+                                             optCtrl=list(maxfun=2e5)), 
                         na.action = na.pass,
                         data = dframe2a) # Gamma model of temperature data 
 
-summary(global.model3d) 
+summary(global.model3d) #the warning message here suggests we have a scaling issue, need to standardise variablies
 
+
+library(arm)                                    
+stdz.global.model3d <- standardize(global.model3d, standardize.y = FALSE)
+#adjusts variables going in so the parameter estimates will be comparable
+summary(stdz.global.model3d)
+
+## assess the full global model to see whether it's worth dropping terms
+library(MuMIn)
+stdz.model.set3d <- dredge(global.model3d)
+stdz.model.set3d           ## the full model comes out as the best
 
 # R-squared 
-
-library(MuMIn)
-r.squaredGLMM(global.model3d)
 library(rsq)
 rsq.glmm(global.model3d)
 
-## model validation
-
-library(LMERConvenienceFunctions)
-mcp.fnc(global.model3d) # plots of model fit
-plot(global.model3d, pch = 30, col = "black", lty = "dotted") # fitted values against the residuals
-
+## check residuals
+plot(global.model3d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
 sresid <- resid(global.model3d, type = "pearson")
 hist(sresid)
 
-fits <- fitted(global.model3d)
-plot(sresid ~ fits)
-
-
-## overdispersion
-overdisp_fun(global.model3d)
-
-
-library(MuMIn)
-model.set3d <- dredge(global.model3d)
-model.set3d
 
 ### log link function ----
 
 ### doesn't converge even after altering optimizer
 
 library(lme4)
-global.model3e <- glmer(humidity_percentage_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
-                        family = Gamma (link = log),
+global.model3e <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
+                          temperature_glasshouse_ibutton_01 +             # interaction terms
+                          Replicate +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          (1|experiment_day) + (1|hive),                  # the random terms 
+                        family = Gamma (link = log),     
                         #   control=glmerControl(optimizer="bobyqa",       
                         #                     optCtrl=list(maxfun=3e5)),  # try Nelder_Mead, nloptwrap and bobyqa optimisers
                         # for full model to aid convergence
@@ -627,13 +593,15 @@ global.model3e <- glmer(humidity_percentage_hive_ibutton_01  ~                 #
 summary(global.model3e) 
 
 
+### doesn't converge even after altering optimizer
 
 library(lme4)
-global.model3f <- glmer(humidity_percentage_hive_ibutton_01  ~                   # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +  # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
-                          (1|experiment_day) + (1|hive),                   # the random term 
-                        family = Gamma (link = "inverse"),
+global.model3f <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
+                          temperature_glasshouse_ibutton_01 +             # interaction terms
+                          Replicate +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          (1|experiment_day) + (1|hive),                  # the random terms 
+                        family = Gamma (link = inverse),     
                         control=glmerControl(optimizer="nloptwrap",       
                                              optCtrl=list(maxfun=3e5)),    # try Nelder_Mead, nloptwrap and bobyqa optimisers
                         # for full model to aid convergence
@@ -647,9 +615,9 @@ summary(global.model3f)  ### scaling issues!!!
 
 ### Model 3 - compare the top models and select the model with the best fit ----
 
-model.set3a # Gaussian family, identity link
-model.set3d # Gamma family, identity link
+stdz.model.set3a # Gaussian family, identity link
+stdz.model.set3d # Gamma family, identity link
 
-write.csv(model.set3a, file = "model_3_gaussian_identity.csv")
-write.csv(model.set3d, file = "model_3_gamma_identity.csv")
+write.csv(stdz.model.set3a, file = "model_3_gaussian_identity.csv")
+write.csv(stdz.model.set3d, file = "model_3_gamma_identity.csv")
 
