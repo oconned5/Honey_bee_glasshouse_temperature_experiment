@@ -257,37 +257,39 @@ library(lme4)
 global.model2a <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
                           temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
                           temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
+                          (1|experiment_day) + (1|hive),                   # the random terms 
                         family = gaussian (link = identity),
                         na.action = na.pass,
                         data = dframe2) # gaussian model of temperature data 
 
 summary(global.model2a) 
 
-# R-squared 
 
+library(arm)                                    
+stdz.global.model2a <- standardize(global.model2a, standardize.y = FALSE)
+#adjusts variables going in so the parameter estimates will be comparable
+summary(stdz.global.model2a)
+
+## assess the full global model to see whether it's worth dropping terms
 library(MuMIn)
-r.squaredGLMM(global.model2a)
+model.set2a <- dredge(stdz.global.model2a)
+model.set2a              ## the full model comes out as the best
 
 
-## model validation
+# R-squared 
+library(MuMIn)
+r.squaredGLMM(stdz.global.model2a)
+
+
+## inspect residuals
 
 library(LMERConvenienceFunctions)
-mcp.fnc(global.model2a) # plots of model fit
-plot(global.model2a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
+mcp.fnc(stdz.global.model2a) # plots of model fit
+plot(stdz.global.model2a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
 
-sresid <- resid(global.model2a, type = "pearson")
+sresid <- resid(stdz.global.model2a, type = "pearson")
 hist(sresid)
-
-fits <- fitted(global.model2a)
-plot(sresid ~ fits)
-
-
-
-library(MuMIn)
-model.set2a <- dredge(global.model2a)
-model.set2a
 
 
 ### log link function ----
@@ -308,8 +310,6 @@ global.model2b <- glmer(temperature_C_hive_ibutton_01  ~                 # the d
 
 summary(global.model2b) 
 
-
-
 ### inverse link function ----
 
 ### doesn't converge even after altering optimizer
@@ -327,8 +327,6 @@ global.model2c <- glmer(temperature_C_hive_ibutton_01  ~                 # the d
                         data = dframe2) # gaussian model of temperature data 
 
 summary(global.model2c) 
-
-
 
 ### Gamma family for continuous response----
 
@@ -349,32 +347,34 @@ global.model2d <- glmer(temperature_C_hive_ibutton_01  ~                 # the d
 
 summary(global.model2d) 
 
+library(arm)                                    
+stdz.global.model2d <- standardize(global.model2d, standardize.y = FALSE)
+#adjusts variables going in so the parameter estimates will be comparable
+summary(stdz.global.model2d)
+
+## assess the full global model to see whether it's worth dropping terms
+library(MuMIn)
+stdz.model.set2d <- dredge(global.model2d)
+stdz.model.set2d           ## the full model comes out as the best
+
 
 # R-squared 
 
 library(MuMIn)
-r.squaredGLMM(global.model2d)
+r.squaredGLMM(stdz.global.model2d)
 library(rsq)
-rsq.glmm(global.model2d)
+rsq.glmm(stdz.global.model2d)
 
-## model validation
+## inspect residuals
 
 library(LMERConvenienceFunctions)
-mcp.fnc(global.model2d) # plots of model fit
-plot(global.model2d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
+mcp.fnc(stdz.global.model2d) # plots of model fit
+plot(stdz.global.model2d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
 
 
-sresid <- resid(global.model2d, type = "pearson")
+sresid <- resid(stdz.global.model2d, type = "pearson")
 hist(sresid)
 
-fits <- fitted(global.model2d)
-plot(sresid ~ fits)
-
-
-
-library(MuMIn)
-model.set2d <- dredge(global.model2d)
-model.set2d
 
 ### log link function ----
 
