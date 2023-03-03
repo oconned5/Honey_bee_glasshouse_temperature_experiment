@@ -43,7 +43,7 @@ dframe2 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_settin
 ## Model 1----
 
 # Relationship between worker movement and glasshouse temperature
-# plus Replicate, and date, with hive as a random term
+# plus Replicate as a fixed effect, with hive and experimental day as random terms
 
 # examine the response variable
 hist(dframe2$bees_out) ## count data with a poisson or negative binomial style distribution
@@ -227,7 +227,7 @@ overdisp_fun(stdz.global.model1d)  ## overdispersion back down to the 1-2 zone!
 ## Model 2----
 
 # Relationship between hive temperature and glasshouse temperature
-# plus Replicate, and date, with hive as a random term
+# plus Replicate as a fixed effect, with hive and experimental day as random terms
 
 ## investigate distribution of response variable
 hist(dframe2$temperature_C_hive_ibutton_01)  ## fairly normally distributed
@@ -408,7 +408,7 @@ write.csv(model.set2d, file = "model_2_gamma_identity.csv")
 ## Model 3----
 
 # Relationship between hive humidity and glasshouse temperature
-# plus Replicate, and date, with hive as a random term
+# plus Replicate as a fixed effect, with hive and experimental day as random terms
 
 ## lets have a look at our continuous variables
 hist(dframe2$humidity_percentage_hive_ibutton_01)  ### long negative left-skewed tail
@@ -456,7 +456,7 @@ hist(dframe2a$temperature_glasshouse_ibutton_01)  ## subsectioned temperature st
 
 
 library(lme4)
-global.model3a <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
+global.model3a <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidity
                         temperature_glasshouse_ibutton_01 +             # interaction terms
                         Replicate +                                     # fixed term
                         temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
@@ -465,7 +465,7 @@ global.model3a <- glmer(neg_sqrt_humidity ~                             # the de
                         control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
                                              optCtrl=list(maxfun=2e5)), 
                         na.action = na.pass,
-                        data = dframe2a)            # gaussian model of humidty data 
+                        data = dframe2a)            # gaussian model of humidity data 
 
 summary(global.model3a) 
 
