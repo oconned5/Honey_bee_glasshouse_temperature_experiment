@@ -89,7 +89,7 @@ plotLMER.fnc(stdz.final.model1) # influence of individual explanatory variables
 library(ggplot2)
 library(sjPlot)
 
-## Plotting model 2 output
+## Plotting model 1 output
 
 dev.new()
 
