@@ -1,5 +1,5 @@
 ########################################################################################
-# Model selection for glasshoue experiment invesitgating the impact of 
+# Model selection for glasshouse experiment investigating the impact of 
 # temperature on honey bee physiology
 
 
@@ -29,7 +29,7 @@ graphics.off() # close all open graphics windows
 #################################################################################
 
 ## read in the data
-dframe1 <- read.csv(file.choose())    # Select "Glasshouse_experiment_database"
+dframe1 <- read.csv(file.choose())    # Select "Honey_bee_glasshouse_temperature_experiment"
 head(dframe1)
 summary(dframe1)
 
