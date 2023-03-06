@@ -17,7 +17,6 @@ graphics.off() # close all open graphics windows
 #install.packages("car")
 #install.packages("ggplot2")
 #install.packages("sjPlot")
-#install.packages("tab")
 #install.packages("MASS")
 #install.packages("LMERConvenienceFunctions")
 
@@ -91,7 +90,6 @@ library(sjPlot)
 
 ## Plotting model 1 output
 
-dev.new()
 
 ww1 <- theme_set(theme_bw())
 ww2 <- plot_model(final.model1, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Replicate"))
@@ -103,7 +101,7 @@ ww4 <- ww3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.text = element_text(size=10)) 
 ww5 <- ww4 + geom_line(size = 2)
 ww6 <- ww5 + ylab("Worker movement")
-ww7 <- ww6 + xlab("Hive temperature (°C)")
+ww7 <- ww6 + xlab("Glasshouse temperature (°C)")
 ww10 <- ww7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
 ww11 <- ww10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
   theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
