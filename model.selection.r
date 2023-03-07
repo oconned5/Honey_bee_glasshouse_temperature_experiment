@@ -176,7 +176,9 @@ summary(global.model1c)
 
 ## as the poisson was overdispersed use negative binomial
 
-### negative binomial with lme4
+#######################################################################################
+#### FINAL MODEL FOR MODEL 1 ##########################################################
+#######################################################################################
 
 library(lme4)
 library(MASS)
@@ -243,6 +245,9 @@ hist(dframe2$temperature_C_hive_ibutton_01)  ## fairly normally distributed
 
 ### identity link function ----
 
+#######################################################################################
+#### FINAL MODEL FOR MODEL 2 ##########################################################
+#######################################################################################
 
 library(lme4)
 global.model2a <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
@@ -454,6 +459,9 @@ hist(dframe2a$temperature_glasshouse_ibutton_01)  ## subsectioned temperature st
 
 ### identity link function ----
 
+#######################################################################################
+#### FINAL MODEL FOR MODEL 3 ##########################################################
+#######################################################################################
 
 library(lme4)
 global.model3a <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidity

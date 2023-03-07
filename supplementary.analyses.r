@@ -119,11 +119,11 @@ yy15
 
 ### exporting high res image
 # PDF
-pdf(file = "Figure_S2_Worker_movement.pdf", width = 10, height = 6, family = "Helvetica")
+pdf(file = "Figure_S3_Worker_movement.pdf", width = 10, height = 6, family = "Helvetica")
 yy15
 dev.off()
 
 # TIFF
-tiff("Figure_S2_Worker_movement.tiff", height = 12, width = 21, units = 'cm', res = 300)
+tiff("Figure_S3_Worker_movement.tiff", height = 12, width = 21, units = 'cm', res = 300)
 yy15
 dev.off()
