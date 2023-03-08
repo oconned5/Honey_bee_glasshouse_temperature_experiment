@@ -9,7 +9,7 @@ library(StatRank)
 temp <- c(7, 12, 17, 22, 27, 36)
 
 
-# do 100 random scrambles of the temperatuer regime
+# do 100 random scrambles of the temperature regime
 random_temp1 <- scramble(temp)
 random_temp2 <- scramble(temp)
 random_temp3 <- scramble(temp)
