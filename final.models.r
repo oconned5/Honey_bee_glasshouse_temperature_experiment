@@ -190,7 +190,7 @@ zz4 <- zz3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.title = element_text(size=18), #change legend title font size
                    legend.text = element_text(size=10)) 
 zz5 <- zz4 + geom_line(size = 2)
-zz6 <- zz5 + ylab("Hive temperature (°C)")
+zz6 <- zz5 + ylab("Colony Brood temperature (°C)")
 zz7 <- zz6 + xlab("Glasshouse temperature (°C)")
 zz10 <- zz7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
 zz11 <- zz10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
@@ -203,12 +203,12 @@ zz15
 
 ### exporting high res image
 # PDF
-pdf(file = "Figure_2_Hive_temperature.pdf", width = 10, height = 6, family = "Helvetica")
+pdf(file = "Figure_2_Brood_temperature.pdf", width = 10, height = 6, family = "Helvetica")
 zz15
 dev.off()
 
 # TIFF
-tiff("Figure_2_Hive_temperature.tiff", height = 12, width = 21, units = 'cm', res = 300)
+tiff("Figure_2_Brood_temperature.tiff", height = 12, width = 21, units = 'cm', res = 300)
 
 zz15
 dev.off()
