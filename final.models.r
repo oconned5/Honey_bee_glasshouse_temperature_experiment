@@ -35,6 +35,10 @@ dframe2 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_settin
 
 #################################################################
 
+#### bees moving into the hive and bees moving out highly correlated,
+#### just use one to represent bee movement
+cor.test (dframe2$bees_out, dframe2$bees_in)
+
 ## Model 1----
 
 # Relationship between worker movement and glasshouse temperature
@@ -285,9 +289,9 @@ ff4 <- ff3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.title = element_text(size=18), #change legend title font size
                    legend.text = element_text(size=10)) 
 ff5 <- ff4 + geom_line(size = 2)
-ff6 <- ff5 + ylab("Percentage humidity (negative sqrt transformation)")
+ff6 <- ff5 + ylab("RH (negative sqrt transformation)")
 ff7 <- ff6 + xlab("Glasshouse temperature (°C)")
-ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=17, vjust=1.5))
+ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
 ff11 <- ff10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
   theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
 ff12 <- ff11 + theme(axis.title.x=element_text(face="bold", size=15, vjust=1.5))
@@ -304,7 +308,7 @@ dev.off()
 
 # TIFF
 tiff("Figure_3_Humidity.tiff", height = 12, width = 21, units = 'cm', res = 300)
-ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=12, vjust=1.5))
+ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=15, vjust=1.5))
 ff11 <- ff10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
   theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
 ff12 <- ff11 + theme(axis.title.x=element_text(face="bold", size=15, vjust=1.5))
