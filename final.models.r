@@ -103,7 +103,7 @@ ww4 <- ww3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.width = unit(1, 'cm'), #change legend key width
                    legend.title = element_text(size=18), #change legend title font size
                    legend.text = element_text(size=10)) 
-ww5 <- ww4 + geom_line(size = 2)
+ww5 <- ww4 + geom_line(linewidth = 2)
 ww6 <- ww5 + ylab("Worker movement")
 ww7 <- ww6 + xlab("Glasshouse temperature (°C)")
 ww10 <- ww7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
@@ -189,7 +189,7 @@ zz4 <- zz3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.width = unit(1, 'cm'), #change legend key width
                    legend.title = element_text(size=18), #change legend title font size
                    legend.text = element_text(size=10)) 
-zz5 <- zz4 + geom_line(size = 2)
+zz5 <- zz4 + geom_line(linewidth = 2)
 zz6 <- zz5 + ylab("Colony brood temperature (°C)")
 zz7 <- zz6 + xlab("Glasshouse temperature (°C)")
 zz10 <- zz7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
@@ -288,7 +288,7 @@ ff4 <- ff3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.width = unit(1, 'cm'), #change legend key width
                    legend.title = element_text(size=18), #change legend title font size
                    legend.text = element_text(size=10)) 
-ff5 <- ff4 + geom_line(size = 2)
+ff5 <- ff4 + geom_line(linewidth = 2)
 ff6 <- ff5 + ylab("Neg_RH")
 ff7 <- ff6 + xlab("Glasshouse temperature (°C)")
 ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
