@@ -289,7 +289,7 @@ ff4 <- ff3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.title = element_text(size=18), #change legend title font size
                    legend.text = element_text(size=10)) 
 ff5 <- ff4 + geom_line(size = 2)
-ff6 <- ff5 + ylab("RH (negative sqrt transformation)")
+ff6 <- ff5 + ylab("Neg_RH")
 ff7 <- ff6 + xlab("Glasshouse temperature (°C)")
 ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
 ff11 <- ff10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
