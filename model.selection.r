@@ -43,7 +43,7 @@ dframe2 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_settin
 ## Model 1----
 
 # Relationship between worker movement and glasshouse temperature
-# plus Replicate as a fixed effect, with hive and experimental day as random terms
+# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
 
 # examine the response variable
 hist(dframe2$bees_out) ## count data with a poisson or negative binomial style distribution
@@ -80,8 +80,8 @@ c(chisq=Pearson.chisq, ratio=prat, rdf=rdf, p=pval)}
 library(lme4)
 global.model1a <- glmer(bees_out  ~                          # count dependent variable
                         temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
-                          Replicate +                          # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                          Experimental_group +                          # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
                           (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                       na.action = na.pass,
                       family = "poisson" (link="log"), data = dframe2) # poisson model of count data 
@@ -123,8 +123,8 @@ library(lme4)
 library(lme4)
 global.model1b <- glmer(bees_out  ~                           # count dependent variable
                           temperature_glasshouse_ibutton_01 + # continuous explanatory variable
-                          Replicate +                          # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                          Experimental_group +                          # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
                           (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                         na.action = na.pass,
                         family = "poisson" (link="sqrt"), data = dframe2) # poisson model of count data 
@@ -164,8 +164,8 @@ overdisp_fun(stdz.global.model1b)   ### this mode has overdispersion >2, try ano
 library(lme4)
 global.model1c <- glmer(bees_out  ~                           # count dependent variable
                           temperature_glasshouse_ibutton_01 + # continuous explanatory variable
-                          Replicate +                          # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                          Experimental_group +                          # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
                           (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                         na.action = na.pass,
                         family = "poisson" (link="identity"), data = dframe2) # poisson model of count data 
@@ -184,8 +184,8 @@ library(lme4)
 library(MASS)
 global.model1d <- glmer.nb(bees_out  ~                            # count dependent variable
                              temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
-                             Replicate +                          # fixed term
-                             temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                             Experimental_group +                          # fixed term
+                             temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
                              (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                            na.action = na.pass, nAGQ = 1, 
                            data = dframe2)                       # negative bionomial model of count data 
@@ -229,7 +229,7 @@ overdisp_fun(stdz.global.model1d)  ## overdispersion back down to the 1-2 zone!
 ## Model 2----
 
 # Relationship between hive temperature and glasshouse temperature
-# plus Replicate as a fixed effect, with hive and experimental day as random terms
+# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
 
 ## investigate distribution of response variable
 hist(dframe2$temperature_C_hive_ibutton_01)  ## fairly normally distributed
@@ -251,8 +251,8 @@ hist(dframe2$temperature_C_hive_ibutton_01)  ## fairly normally distributed
 
 library(lme4)
 global.model2a <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
+                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
                           (1|experiment_day) + (1|hive),                   # the random terms 
                         family = gaussian (link = identity),
                         na.action = na.pass,
@@ -290,8 +290,8 @@ hist(sresid)
 
 library(lme4)
 global.model2b <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
+                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
                           (1|experiment_day) + (1|hive),                # the random term 
                         family = gaussian (link = log),
                         #  control=glmerControl(optimizer="bobyqa",       
@@ -308,8 +308,8 @@ summary(global.model2b)
 
 library(lme4)
 global.model2c <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
+                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
                           (1|experiment_day) + (1|hive),                # the random term 
                         family = gaussian (link = "inverse"),
                         #  control=glmerControl(optimizer="bobyqa",       
@@ -328,8 +328,8 @@ summary(global.model2c)
 
 library(lme4)
 global.model2d <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
+                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
                           (1|experiment_day) + (1|hive),                # the random term 
                         family = Gamma (link = identity),
                         control=glmerControl(optimizer="bobyqa",       
@@ -367,8 +367,8 @@ hist(sresid)
 
 library(lme4)
 global.model2e <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
+                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
                           (1|experiment_day) + (1|hive),                # the random term 
                         family = Gamma (link = log),
                         #   control=glmerControl(optimizer="bobyqa",       
@@ -385,8 +385,8 @@ summary(global.model2e)
 
 library(lme4)
 global.model2f <- glmer(temperature_C_hive_ibutton_01  ~                   # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +  # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
+                          temperature_glasshouse_ibutton_01 + Experimental_group +  # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
                           (1|experiment_day) + (1|hive),                   # the random term 
                         family = Gamma (link = "inverse"),
                       #  control=glmerControl(optimizer="nloptwrap",       
@@ -413,7 +413,7 @@ write.csv(model.set2d, file = "model_2_gamma_identity.csv")
 ## Model 3----
 
 # Relationship between hive humidity and glasshouse temperature
-# plus Replicate as a fixed effect, with hive and experimental day as random terms
+# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
 
 ## lets have a look at our continuous variables
 hist(dframe2$humidity_percentage_hive_ibutton_01)  ### long negative left-skewed tail
@@ -466,8 +466,8 @@ hist(dframe2a$temperature_glasshouse_ibutton_01)  ## subsectioned temperature st
 library(lme4)
 global.model3a <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidity
                         temperature_glasshouse_ibutton_01 +             # interaction terms
-                        Replicate +                                     # fixed term
-                        temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                        Experimental_group +                                     # fixed term
+                        temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
                         (1|experiment_day) + (1|hive),                  # the random terms 
                         family = gaussian (link = identity),
                         control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
@@ -507,8 +507,8 @@ hist(sresid)
 library(lme4)
 global.model3b <- glmer(neg_sqrt_humidity ~                               # the dependent variable - neg. sqrt humidty
                           temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Replicate +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          Experimental_group +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
                           (1|experiment_day) + (1|hive),                  # the random terms 
                         family = gaussian (link = log),
                       #  control=glmerControl(optimizer="Nelder_Mead",    # try Nelder_Mead, nloptwrap and bobyqa optimisers  
@@ -526,8 +526,8 @@ summary(global.model3b)
 library(lme4)
 global.model3c <- glmer(neg_sqrt_humidity ~                               # the dependent variable - neg. sqrt humidty
                           temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Replicate +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          Experimental_group +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
                           (1|experiment_day) + (1|hive),                  # the random terms 
                         family = gaussian (link = inverse),
                         #  control=glmerControl(optimizer="Nelder_Mead",    # try Nelder_Mead, nloptwrap and bobyqa optimisers  
@@ -548,8 +548,8 @@ summary(global.model3c)
 library(lme4)
 global.model3d <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
                           temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Replicate +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          Experimental_group +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
                           (1|experiment_day) + (1|hive),                  # the random terms 
                         family = Gamma (link = identity),                 
                         control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
@@ -588,8 +588,8 @@ hist(sresid)
 library(lme4)
 global.model3e <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
                           temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Replicate +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          Experimental_group +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
                           (1|experiment_day) + (1|hive),                  # the random terms 
                         family = Gamma (link = log),     
                         #   control=glmerControl(optimizer="bobyqa",       
@@ -606,8 +606,8 @@ summary(global.model3e)
 library(lme4)
 global.model3f <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
                           temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Replicate +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          Experimental_group +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
                           (1|experiment_day) + (1|hive),                  # the random terms 
                         family = Gamma (link = inverse),     
                         control=glmerControl(optimizer="nloptwrap",       

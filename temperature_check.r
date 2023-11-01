@@ -34,6 +34,8 @@ dframe4 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_settin
                     temperature_glasshouse_ibutton_01 != "NA", 
                   select=c(date_julian, unix_timestamp, treatment_temperature_C, temperature_glasshouse_ibutton_01))
 
+cor.test (dframe4$treatment_temperature_C, dframe4$temperature_glasshouse_ibutton_01)
+
 dframe5 <- pivot_longer(dframe4, cols=3:4, names_to = "category", values_to = "temperature")
 
 
@@ -73,6 +75,9 @@ dev.off()
 ## by ~ 5 minutes intervals
 
 dframe6 <- subset(dframe5, unix_timestamp != "NA")
+
+
+
 
 
 hh1 <- ggplot(dframe5, aes(unix_timestamp, temperature, colour = category)) +

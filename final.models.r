@@ -42,14 +42,14 @@ cor.test (dframe2$bees_out, dframe2$bees_in)
 ## Model 1----
 
 # Relationship between worker movement and glasshouse temperature
-# plus Replicate as a fixed effect, with hive and experimental day as random terms
+# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
 
 library(lme4)
 library(MASS)
 final.model1 <- glmer.nb(bees_out  ~                            # count dependent variable
                              temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
-                             Replicate +                          # fixed term
-                             temperature_glasshouse_ibutton_01:Replicate + # interaction term 
+                             Experimental_group +                          # fixed term
+                             temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
                              (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
                            na.action = na.pass, nAGQ = 1, 
                            data = dframe2)                       # negative bionomial model of count data 
@@ -96,12 +96,12 @@ library(sjPlot)
 
 
 ww1 <- theme_set(theme_bw())
-ww2 <- plot_model(final.model1, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Replicate"))
-ww3 <- ww2 + labs(color = "Replicate")
+ww2 <- plot_model(final.model1, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Experimental_group"))
+ww3 <- ww2 + labs(color = "Experimental_group")
 ww4 <- ww3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.height = unit(1, 'cm'), #change legend key height
                    legend.key.width = unit(1, 'cm'), #change legend key width
-                   legend.title = element_text(size=18), #change legend title font size
+                   legend.title = element_text(size=15), #change legend title font size
                    legend.text = element_text(size=10)) 
 ww5 <- ww4 + geom_line(linewidth = 2)
 ww6 <- ww5 + ylab("Worker movement")
@@ -132,12 +132,12 @@ dev.off()
 ## Model 2----
 
 # Relationship between hive temperature and glasshouse temperature
-# plus Replicate as a fixed effect, with hive and experimental day as random terms
+# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
 
 library(lme4)
 final.model2 <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Replicate +   # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +    # interaction terms
+                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
                           (1|experiment_day) + (1|hive),                   # the random terms 
                         family = gaussian (link = identity),
                         na.action = na.pass,
@@ -182,12 +182,12 @@ library(sjPlot)
 ## Plotting model 2 output
 
 zz1 <- theme_set(theme_bw())
-zz2 <- plot_model(final.model2, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Replicate"))
-zz3 <- zz2 + labs(color = "Replicate")
+zz2 <- plot_model(final.model2, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Experimental_group"))
+zz3 <- zz2 + labs(color = "Experimental_group")
 zz4 <- zz3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.height = unit(1, 'cm'), #change legend key height
                    legend.key.width = unit(1, 'cm'), #change legend key width
-                   legend.title = element_text(size=18), #change legend title font size
+                   legend.title = element_text(size=15), #change legend title font size
                    legend.text = element_text(size=10)) 
 zz5 <- zz4 + geom_line(linewidth = 2)
 zz6 <- zz5 + ylab("Colony brood temperature (°C)")
@@ -219,7 +219,7 @@ dev.off()
 ## Model 3----
 
 # Relationship between hive humidity and glasshouse temperature
-# plus Replicate as a fixed effect, with hive and experimental day as random terms
+# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
 
 ## exclude hive_02 as it's humidity readings don't seem to have worked
 dframe2a <- subset(dframe2, hive != "hive_02")
@@ -230,8 +230,8 @@ neg_sqrt_humidity <- sqrt(max(dframe2a$humidity_percentage_hive_ibutton_01+1) - 
 library(lme4)
 final.model3 <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidity
                           temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Replicate +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Replicate +   # interaction terms
+                          Experimental_group +                                     # fixed term
+                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
                           (1|experiment_day) + (1|hive),                  # the random terms 
                         family = gaussian (link = identity),
                         control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
@@ -281,12 +281,12 @@ library(sjPlot)
 ## Plotting model 3 output
 
 ff1 <- theme_set(theme_bw())
-ff2 <- plot_model(final.model3, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Replicate"))
-ff3 <- ff2 + labs(color = "Replicate")
+ff2 <- plot_model(final.model3, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Experimental_group"))
+ff3 <- ff2 + labs(color = "Experimental_group")
 ff4 <- ff3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.height = unit(1, 'cm'), #change legend key height
                    legend.key.width = unit(1, 'cm'), #change legend key width
-                   legend.title = element_text(size=18), #change legend title font size
+                   legend.title = element_text(size=15), #change legend title font size
                    legend.text = element_text(size=10)) 
 ff5 <- ff4 + geom_line(linewidth = 2)
 ff6 <- ff5 + ylab("Neg_RH")
