@@ -152,7 +152,7 @@ qqq15
 dev.off()
 
 
-### the modelled impact on bee worker movement of the interaction between 
+### the modeled impact on bee worker movement of the interaction between 
 ### glasshouse temperature and the number of days in the glasshouse
 
 ppp1 <- theme_set(theme_bw())
@@ -193,7 +193,7 @@ dev.off()
 ####  Model 2 ###############
 #############################
 
-# Relationship between hive temperature, days spent in the glasshouse and glasshouse temperature
+# Relationship between colony brood temperature, days spent in the glasshouse and glasshouse temperature
 # plus Experimental_group as a fixed effect, with hive ID and the treatment temperature from the previous day as random terms
 
 library(glmmTMB)
@@ -271,7 +271,7 @@ dev.off()
 
 
 
-### the modeled impact of glasshouse temperature on brood temperature
+### the modeled impact of glasshouse temperature on colony brood temperature
 
 zz1 <- theme_set(theme_bw())
 zz2 <- plot_model(final.model2, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Experimental_group"))
@@ -340,7 +340,7 @@ dev.off()
 
 ## exclude hive_02 as it's humidity readings don't seem to have worked
 dframe2a <- subset(dframe2, hive != "hive_02")
-## try a negative square root transformation f to reduce the negative skew in the humidity data
+## implement a negative square root transformation to reduce the negative skew in the humidity data
 neg_sqrt_humidity <- sqrt(max(dframe2a$humidity_percentage_hive_ibutton_01+1) - dframe2a$humidity_percentage_hive_ibutton_01) 
 
 
@@ -381,7 +381,7 @@ library(ggplot2)
 library(sjPlot)
 library(effects)
 
-
+### the modeled impact on Neg_RH of glasshouse air temperature
 
 nnn1 <- plot(Effect(focal.predictors = c("temperature_glasshouse_ibutton_01"), 
             mod=final.model3),
