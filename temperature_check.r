@@ -82,11 +82,17 @@ dframe6 <- subset(dframe5, unix_timestamp != "NA")
 
 hh1 <- ggplot(dframe5, aes(unix_timestamp, temperature, colour = category)) +
   geom_line() 
-hh2 <- hh1 + theme(panel.grid.major = element_blank(),
+hh1a <- hh1 + labs(color = "Days in glasshouse")
+hh1b <- hh1a + theme(legend.key.size = unit(1, 'cm'), #change legend key size
+                     legend.key.height = unit(1, 'cm'), #change legend key height
+                     legend.key.width = unit(1, 'cm'), #change legend key width
+                     legend.title = element_text(size=15), #change legend title font size
+                     legend.text = element_text(size=10)) 
+hh2 <- hh1b + theme(panel.grid.major = element_blank(),
                    panel.grid.minor = element_blank()) +
   theme(panel.background = element_blank())
-hh3 <- hh2 + ylab("Temperature")
-hh4 <- hh3 + xlab("Unix timestamp")
+hh3 <- hh2 + ylab("Temperature (°C)")
+hh4 <- hh3 + xlab("Unix timestamp in 15 minute increments")
 hh5 <- hh4 + theme(axis.line = element_line(colour = "black"))
 hh6 <- hh5 + scale_color_manual(values=c("black", "red"))
 hh7 <- hh6 + theme(axis.title.y=element_text(face="bold", size=15, vjust=1.5))
@@ -98,12 +104,12 @@ hh10
 
 ### exporting high res image
 # PDF
-pdf(file = "Temperature by 5 minute interval.pdf", width = 12, height = 6, family = "Helvetica")
+pdf(file = "Fig. S2 - temperature by 15 minute intervals.pdf", width = 12, height = 6, family = "Helvetica")
 hh10
 dev.off()
 
 # TIFF
-tiff("Temperature by 5 minute interval.tiff", height = 12, width = 22, units = 'cm', res = 300)
+tiff("Fig. S2 - temperature by 15 minute intervals.tiff", height = 12, width = 22, units = 'cm', res = 300)
 hh10
 dev.off()
 

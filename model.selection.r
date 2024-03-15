@@ -11,20 +11,13 @@ graphics.off() # close all open graphics windows
 
 # Packages that may be needed, remove the # to install
 
-#install.packages("arm")
-#install.packages("lme4")
+#install.packages("glmmTMB")
+#install.packages("bbmle")
 #install.packages("MuMIn")
-#install.packages("car")
 #install.packages("LMERConvenienceFunctions")
-#install.packages("ggplot2")
-#install.packages("sjPlot")
-#install.packages("tab")
 #install.packages("rsq")
 #install.packages("MASS")
-#install.packages("dplyr")
-#install.packages("tidyr")
-
-
+#install.packages("performance")
 
 #################################################################################
 
@@ -42,8 +35,8 @@ dframe2 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_settin
 
 ## Model 1----
 
-# Relationship between worker movement and glasshouse temperature
-# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
+# Relationship between worker movement, glasshouse temperature and days spent in glasshouse
+# plus Experimental_group as a fixed effect, with hive ID and the treatment temperature from the previous day as random terms
 
 # examine the response variable
 hist(dframe2$bees_out) ## count data with a poisson or negative binomial style distribution
@@ -51,21 +44,6 @@ hist(dframe2$bees_out) ## count data with a poisson or negative binomial style d
 # examine the continuous explanatory variable 
 hist(dframe2$temperature_glasshouse_ibutton_01)  # quite normally distributed
 
-## as we'll be dealing with poisson models it's important to check overdispersion
-### write function to calculate overdispersion
-
-library(dplyr)
-library(tidyr)
-overdisp_fun <- function(model) {vpars <- function (m)    ## run in one block
-{nrow(m)*(nrow(m) + 1)/2}
-model.df <- sum(sapply(VarCorr(model), vpars)) +
-  length(fixef(model))
-rdf <- nrow(model.frame(model)) -model.df
-rp <- residuals(model, type="pearson")
-Pearson.chisq <- sum(rp^2)
-prat <- Pearson.chisq/rdf
-pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE)
-c(chisq=Pearson.chisq, ratio=prat, rdf=rdf, p=pval)}
 
 #################################################################
 
@@ -73,154 +51,130 @@ c(chisq=Pearson.chisq, ratio=prat, rdf=rdf, p=pval)}
 ### poisson family for count response----
 
 ## All variables plus interactions model selection
-## carry out model selection with different link functions and compare for fit
 
-### log link function
+library(glmmTMB)
+library(bbmle) 
+global.model1a <- glmmTMB(bees_out  ~                          # count dependent variable
+                          Experimental_group +                 # categorical variable   
+                          temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
+                          days_in_glasshouse +                 # continuous explanatory variable
+                          temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term 
+                        + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                        family = "poisson", na.action = "na.pass", # poisson model of count data 
+                        data = dframe2)                       
+summary(global.model1a)
 
-library(lme4)
-global.model1a <- glmer(bees_out  ~                          # count dependent variable
-                        temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
-                          Experimental_group +                          # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
-                          (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
-                      na.action = na.pass,
-                      family = "poisson" (link="log"), data = dframe2) # poisson model of count data 
-
-summary(global.model1a) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-# Standardise the global model's parameters so that SD = 0.5,
-# to make them directly comparable despite them being measured on different scales
-
-library(arm)                                    
-stdz.global.model1a <- standardize(global.model1a, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.global.model1a)
 
 ## assess the full global model to see whether it's worth dropping terms
 library(MuMIn)
-model.set1a <- dredge(stdz.global.model1a)
+model.set1a <- dredge(global.model1a)
 model.set1a    ## the full model comes out as the best
 
+library(data.table)
+fwrite(model.set1a, file = "model_1a.csv")
 
 # R-squared 
 library(MuMIn)
-r.squaredGLMM(stdz.global.model1a)
+r.squaredGLMM(global.model1a)
 
-## check the residuals
-plot(stdz.global.model1a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(stdz.global.model1a, type = "pearson")
+## check residuals
+sresid <- resid(global.model1a, type = "pearson")
 hist(sresid)
 
-## overdispersion
-overdisp_fun(stdz.global.model1a)   ### this mode has overdispersion >2, try another model
-
-
-
-### sqrt link function
-
-library(lme4)
-library(lme4)
-global.model1b <- glmer(bees_out  ~                           # count dependent variable
-                          temperature_glasshouse_ibutton_01 + # continuous explanatory variable
-                          Experimental_group +                          # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
-                          (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
-                        na.action = na.pass,
-                        family = "poisson" (link="sqrt"), data = dframe2) # poisson model of count data 
-
-summary(global.model1b) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-# Standardise the global model's parameters so that SD = 0.5,
-# to make them directly comparable despite them being measured on different scales
-
-library(arm)                                    
-stdz.global.model1b <- standardize(global.model1b, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.global.model1b)
-
-## assess the full global model to see whether it's worth dropping terms
-library(MuMIn)
-model.set1b <- dredge(stdz.global.model1b)
-model.set1b    ## the full model comes out as the best
-
-
-# R-squared 
-library(MuMIn)
-r.squaredGLMM(stdz.global.model1b)
-
-## check the residuals
-plot(stdz.global.model1b, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(stdz.global.model1b, type = "pearson")
-hist(sresid)
+library(MASS)
+library(performance)
 
 ## overdispersion
-overdisp_fun(stdz.global.model1b)   ### this mode has overdispersion >2, try another model
+check_overdispersion(global.model1a)   ### this mode has overdispersion >2, try another model
 
-
-### identity link function - fails, identity link not appropriate
-
-library(lme4)
-global.model1c <- glmer(bees_out  ~                           # count dependent variable
-                          temperature_glasshouse_ibutton_01 + # continuous explanatory variable
-                          Experimental_group +                          # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
-                          (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
-                        na.action = na.pass,
-                        family = "poisson" (link="identity"), data = dframe2) # poisson model of count data 
-summary(global.model1c) 
-
-
-### negative binomial family for count response----
-
-## as the poisson was overdispersed use negative binomial
 
 #######################################################################################
 #### FINAL MODEL FOR MODEL 1 ##########################################################
 #######################################################################################
 
-library(lme4)
-library(MASS)
-global.model1d <- glmer.nb(bees_out  ~                            # count dependent variable
-                             temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
-                             Experimental_group +                          # fixed term
-                             temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
-                             (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
-                           na.action = na.pass, nAGQ = 1, 
-                           data = dframe2)                       # negative bionomial model of count data 
+### negative binomial family for count response using nbinom1 implementation (linear parameterization)----
 
-summary(global.model1d) #the warning message here suggests we have a scaling issue, need to standardise variablies
+## All variables plus interactions model selection
 
-# Standardise the global model's parameters so that SD = 0.5,
-# to make them directly comparable despite them being measured on different scales
+library(glmmTMB)
+library(bbmle) 
+global.model1b <- glmmTMB(bees_out  ~                          # count dependent variable
+                            Experimental_group +                 # categorical variable   
+                            temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
+                            days_in_glasshouse +                 # continuous explanatory variable
+                            temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term 
+                          + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                          family = "nbinom1", na.action = "na.pass", # negative binomial model of count data 
+                          data = dframe2)                       
+summary(global.model1b)
 
-library(arm)                                    
-stdz.global.model1d <- standardize(global.model1d, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.global.model1d)
 
 ## assess the full global model to see whether it's worth dropping terms
 library(MuMIn)
-model.set1d <- dredge(stdz.global.model1d)
-model.set1d    ## the full model comes out as the best
-write.csv(model.set1d, file = "model_1_negative_binomial.csv")
+model.set1b <- dredge(global.model1b)
+model.set1b    ## the full model comes out as the best
+
+library(data.table)
+fwrite(model.set1b, file = "model_1b.csv")
 
 # R-squared 
-
 library(MuMIn)
-r.squaredGLMM(stdz.global.model1d)
+r.squaredGLMM(global.model1b)
 
 ## check residuals
-plot(stdz.global.model1d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(stdz.global.model1d, type = "pearson")
+sresid <- resid(global.model1b, type = "pearson")
 hist(sresid)
 
+library(MASS)
+library(performance)
 
-## calculate overdispersion
-overdisp_fun(stdz.global.model1d)  ## overdispersion back down to the 1-2 zone!
+## overdispersion
+check_overdispersion(global.model1b)   ### overdispersion fixed!
 
+
+#######################################################################################
+#######################################################################################
+
+
+### negative binomial family for count response using nbinom2 implementation (quadratic parameterization)----
+
+## All variables plus interactions model selection
+
+library(glmmTMB)
+library(bbmle) 
+global.model1c <- glmmTMB(bees_out  ~                          # count dependent variable
+                            Experimental_group +                 # categorical variable   
+                            temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
+                            days_in_glasshouse +                 # continuous explanatory variable
+                            temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term 
+                          + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                          family = "nbinom2", na.action = "na.pass", # negative binomial model of count data 
+                          data = dframe2)                       
+summary(global.model1c)
+
+
+## assess the full global model to see whether it's worth dropping terms
+library(MuMIn)
+model.set1c <- dredge(global.model1c)
+model.set1c    ## the full model comes out as the best
+
+library(data.table)
+fwrite(model.set1c, file = "model_1c.csv")
+
+
+# R-squared 
+library(MuMIn)
+r.squaredGLMM(global.model1c)
+
+## check residuals
+sresid <- resid(global.model1c, type = "pearson")
+hist(sresid)
+
+library(MASS)
+library(performance)
+
+## overdispersion
+check_overdispersion(global.model1c)   ### overdispersion fixed!
 
 
 
@@ -228,192 +182,82 @@ overdisp_fun(stdz.global.model1d)  ## overdispersion back down to the 1-2 zone!
 
 ## Model 2----
 
-# Relationship between hive temperature and glasshouse temperature
-# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
-
+# Relationship between hive temperature, glasshouse temperature and days spent in glasshouse
+# plus Experimental_group as a fixed effect, with hive ID and the treatment temperature from the previous day as random terms
 ## investigate distribution of response variable
 hist(dframe2$temperature_C_hive_ibutton_01)  ## fairly normally distributed
 
 
 #################################################################
 
-
-### gaussian family for continuous response----
-
-## All variables plus interactions model selection
-## carry out model selection with different link functions and compare for fit
-
-### identity link function ----
-
 #######################################################################################
 #### FINAL MODEL FOR MODEL 2 ##########################################################
 #######################################################################################
 
-library(lme4)
-global.model2a <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
-                          (1|experiment_day) + (1|hive),                   # the random terms 
-                        family = gaussian (link = identity),
-                        na.action = na.pass,
-                        data = dframe2) # gaussian model of temperature data 
+### gaussian family for continuous response----
 
+## All variables plus interactions model selection
+
+
+library(glmmTMB)
+library(bbmle) 
+global.model2a <- glmmTMB (temperature_C_hive_ibutton_01  ~                 # the continuous dependent variable
+                           Experimental_group +                           # categorical variable  
+                           temperature_glasshouse_ibutton_01 +            # continuous explanatory variable
+                           days_in_glasshouse +                           # continuous explanatory variable
+                           temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term
+                           + (1|hive)+ (1|previous_day_treatment_temperature_C),  # the random terms
+                         family = "gaussian", na.action = "na.pass",      # gaussian model for continuous variable
+                         data = dframe2)            
 summary(global.model2a) 
 
 
-library(arm)                                    
-stdz.global.model2a <- standardize(global.model2a, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.global.model2a)
-
 ## assess the full global model to see whether it's worth dropping terms
 library(MuMIn)
-model.set2a <- dredge(stdz.global.model2a)
+model.set2a <- dredge(global.model2a)
 model.set2a              ## the full model comes out as the best
 
+library(data.table)
+fwrite(model.set2a, file = "model_2a.csv")
 
 # R-squared 
 library(MuMIn)
-r.squaredGLMM(stdz.global.model2a)
+r.squaredGLMM(global.model2a)
 
 
-## inspect residuals
-plot(stdz.global.model2a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(stdz.global.model2a, type = "pearson")
+sresid <- resid(global.model2a, type = "pearson")
 hist(sresid)
 
+#######################################################################################
+#######################################################################################
 
-### log link function ----
+
+### gamma family for continuous response----
+
+## All variables plus interactions model selection
 
 ### doesn't converge even after altering optimizer
 
-library(lme4)
-global.model2b <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
-                        family = gaussian (link = log),
-                        #  control=glmerControl(optimizer="bobyqa",       
-                        #                      optCtrl=list(maxfun=2e5)), # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
-                        na.action = na.pass,
-                        data = dframe2) # gaussian model of temperature data 
 
+library(glmmTMB)
+library(bbmle) 
+global.model2b <- glmmTMB (temperature_C_hive_ibutton_01  ~                 # the continuous dependent variable
+                             Experimental_group +                           # categorical variable  
+                             temperature_glasshouse_ibutton_01 +            # continuous explanatory variable
+                             days_in_glasshouse +                           # continuous explanatory variable
+                             temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term
+                           + (1|hive)+ (1|previous_day_treatment_temperature_C),  # the random terms 
+                           family = "Gamma", na.action = "na.pass",      # gamma model for continuous variable
+                           data = dframe2)            
 summary(global.model2b) 
-
-### inverse link function ----
-
-### doesn't converge even after altering optimizer
-
-library(lme4)
-global.model2c <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
-                        family = gaussian (link = "inverse"),
-                        #  control=glmerControl(optimizer="bobyqa",       
-                        #                      optCtrl=list(maxfun=2e5)), # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
-                        na.action = na.pass,
-                        data = dframe2) # gaussian model of temperature data 
-
-summary(global.model2c) 
-
-### Gamma family for continuous response----
-
-
-### identity link function ----
-
-
-library(lme4)
-global.model2d <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
-                        family = Gamma (link = identity),
-                        control=glmerControl(optimizer="bobyqa",       
-                                             optCtrl=list(maxfun=2e5)), # bobyqa optimiser aids convergence
-                        na.action = na.pass,
-                        data = dframe2) # Gamma model of temperature data 
-
-summary(global.model2d) 
-
-library(arm)                                    
-stdz.global.model2d <- standardize(global.model2d, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.global.model2d)
-
-## assess the full global model to see whether it's worth dropping terms
-library(MuMIn)
-stdz.model.set2d <- dredge(global.model2d)
-stdz.model.set2d           ## the full model comes out as the best
-
-
-# R-squared 
-library(rsq)
-rsq.glmm(stdz.global.model2d)
-
-## inspect residuals
-plot(stdz.global.model2d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(stdz.global.model2d, type = "pearson")
-hist(sresid)
-
-
-### log link function ----
-
-### doesn't converge even after altering optimizer
-
-library(lme4)
-global.model2e <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
-                          (1|experiment_day) + (1|hive),                # the random term 
-                        family = Gamma (link = log),
-                        #   control=glmerControl(optimizer="bobyqa",       
-                        #                     optCtrl=list(maxfun=2e5)),  # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
-                        na.action = na.pass,
-                        data = dframe2) # Gamma model of temperature data 
-
-summary(global.model2e) 
-
-### inverse link function ----
-
-### doesn't converge even after altering optimizer
-
-library(lme4)
-global.model2f <- glmer(temperature_C_hive_ibutton_01  ~                   # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Experimental_group +  # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
-                          (1|experiment_day) + (1|hive),                   # the random term 
-                        family = Gamma (link = "inverse"),
-                      #  control=glmerControl(optimizer="nloptwrap",       
-                       #                      optCtrl=list(maxfun=2e5)),    # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
-                        na.action = na.pass,
-                        data = dframe2) # Gamma model of temperature data 
-
-summary(global.model2f) 
-
-### Model 2 - compare the top models and select the model with the best fit ----
-
-model.set2a # Gaussian family, identity link
-model.set2d # Gamma family, identity link
-
-write.csv(model.set2a, file = "model_2_gaussian_identity.csv")
-write.csv(model.set2d, file = "model_2_gamma_identity.csv")
-
-
 
 
 #################################################################
 
 ## Model 3----
 
-# Relationship between hive humidity and glasshouse temperature
-# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
+# Relationship between hive humidity, glasshouse temperature and days in the glasshouse
+# plus Experimental_group as a fixed effect, with hive ID and the treatment temperature from the previous day as random terms
 
 ## lets have a look at our continuous variables
 hist(dframe2$humidity_percentage_hive_ibutton_01)  ### long negative left-skewed tail
@@ -457,175 +301,59 @@ hist(dframe2a$temperature_glasshouse_ibutton_01)  ## subsectioned temperature st
 ## All variables plus interactions model selection
 ## carry out model selection with different link functions and compare for fit
 
-### identity link function ----
 
 #######################################################################################
-#### FINAL MODEL FOR MODEL 3 ##########################################################
+#### FINAL MODEL FOR MODEL 3 - full model minus the Experimental Group variable #######
 #######################################################################################
 
-library(lme4)
-global.model3a <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidity
-                        temperature_glasshouse_ibutton_01 +             # interaction terms
-                        Experimental_group +                                     # fixed term
-                        temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
-                        (1|experiment_day) + (1|hive),                  # the random terms 
-                        family = gaussian (link = identity),
-                        control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
-                                             optCtrl=list(maxfun=2e5)), 
-                        na.action = na.pass,
-                        data = dframe2a)            # gaussian model of humidity data 
 
-summary(global.model3a) 
+library("glmmTMB")
+library("bbmle") 
+global.model3a <- glmmTMB(neg_sqrt_humidity ~                          # the dependent variable - neg. sqrt humidity
+                           Experimental_group +                        # categorical variable 
+                           temperature_glasshouse_ibutton_01 +         # continuous explanatory variable
+                           days_in_glasshouse +                        # continuous explanatory variable
+                           temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term
+                         + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                         family = "gaussian", na.action = "na.pass", 
+                         data = dframe2a)            # gaussian model of humidity data 
+summary(global.model3a)  
 
-library(arm)                                    
-stdz.global.model3a <- standardize(global.model3a, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.global.model3a)
 
 ## assess the full global model to see whether it's worth dropping terms
 library(MuMIn)
-stdz.model.set3a <- dredge(global.model3a)
-stdz.model.set3a           ## the full model comes out as the best
+model.set3a <- dredge(global.model3a)
+model.set3a           ## the model removing Experimental group is the best
+
+library(data.table)
+fwrite(model.set3a, file = "model_3a.csv")
 
 # R-squared 
 library(MuMIn)
 r.squaredGLMM(global.model3a)
 
-
-## check residuals
-plot(global.model3a, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
 sresid <- resid(global.model3a, type = "pearson")
 hist(sresid)
 
 
+### gamma family for continuous response----
 
-### log link function ----
+## All variables plus interactions model selection
 
 ### doesn't converge even after altering optimizer
 
-library(lme4)
-global.model3b <- glmer(neg_sqrt_humidity ~                               # the dependent variable - neg. sqrt humidty
-                          temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Experimental_group +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
-                          (1|experiment_day) + (1|hive),                  # the random terms 
-                        family = gaussian (link = log),
-                      #  control=glmerControl(optimizer="Nelder_Mead",    # try Nelder_Mead, nloptwrap and bobyqa optimisers  
-                      #                      optCtrl=list(maxfun=2e5)), 
-                        na.action = na.pass,
-                        data = dframe2a) # gaussian model of temperature data 
 
+library("glmmTMB")
+library("bbmle") 
+global.model3b <- glmmTMB(neg_sqrt_humidity ~                          # the dependent variable - neg. sqrt humidity
+                            Experimental_group +                        # categorical variable 
+                            temperature_glasshouse_ibutton_01 +         # continuous explanatory variable
+                            days_in_glasshouse +                        # continuous explanatory variable
+                            temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term
+                          + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                          family = "Gamma", na.action = "na.pass", 
+                          data = dframe2a)            # gamma model of humidity data 
 summary(global.model3b) 
 
 
-### inverse link function ----
-
-### doesn't converge even after altering optimizer
-
-library(lme4)
-global.model3c <- glmer(neg_sqrt_humidity ~                               # the dependent variable - neg. sqrt humidty
-                          temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Experimental_group +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
-                          (1|experiment_day) + (1|hive),                  # the random terms 
-                        family = gaussian (link = inverse),
-                        #  control=glmerControl(optimizer="Nelder_Mead",    # try Nelder_Mead, nloptwrap and bobyqa optimisers  
-                        #                      optCtrl=list(maxfun=2e5)), 
-                        na.action = na.pass,
-                        data = dframe2a) # gaussian model of temperature data 
-
-summary(global.model3c) 
-
-
-
-### Gamma family for continuous response----
-
-
-### identity link function ----
-
-
-library(lme4)
-global.model3d <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
-                          temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Experimental_group +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
-                          (1|experiment_day) + (1|hive),                  # the random terms 
-                        family = Gamma (link = identity),                 
-                        control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
-                                             optCtrl=list(maxfun=2e5)), 
-                        na.action = na.pass,
-                        data = dframe2a) # Gamma model of temperature data 
-
-summary(global.model3d) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-
-library(arm)                                    
-stdz.global.model3d <- standardize(global.model3d, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.global.model3d)
-
-## assess the full global model to see whether it's worth dropping terms
-library(MuMIn)
-stdz.model.set3d <- dredge(global.model3d)
-stdz.model.set3d           ## the full model comes out as the best
-
-# R-squared 
-library(rsq)
-rsq.glmm(global.model3d)
-
-## check residuals
-plot(global.model3d, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(global.model3d, type = "pearson")
-hist(sresid)
-
-
-### log link function ----
-
-### doesn't converge even after altering optimizer
-
-library(lme4)
-global.model3e <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
-                          temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Experimental_group +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
-                          (1|experiment_day) + (1|hive),                  # the random terms 
-                        family = Gamma (link = log),     
-                        #   control=glmerControl(optimizer="bobyqa",       
-                        #                     optCtrl=list(maxfun=3e5)),  # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
-                        na.action = na.pass,
-                        data = dframe2a) # Gamma model of temperature data 
-
-summary(global.model3e) 
-
-
-### doesn't converge even after altering optimizer
-
-library(lme4)
-global.model3f <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidty
-                          temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Experimental_group +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
-                          (1|experiment_day) + (1|hive),                  # the random terms 
-                        family = Gamma (link = inverse),     
-                        control=glmerControl(optimizer="nloptwrap",       
-                                             optCtrl=list(maxfun=3e5)),    # try Nelder_Mead, nloptwrap and bobyqa optimisers
-                        # for full model to aid convergence
-                        na.action = na.pass,
-                        data = dframe2a) # Gamma model of temperature data 
-
-summary(global.model3f)  ### scaling issues!!!
-
-
-
-
-### Model 3 - compare the top models and select the model with the best fit ----
-
-stdz.model.set3a # Gaussian family, identity link
-stdz.model.set3d # Gamma family, identity link
-
-write.csv(stdz.model.set3a, file = "model_3_gaussian_identity.csv")
-write.csv(stdz.model.set3d, file = "model_3_gamma_identity.csv")
 

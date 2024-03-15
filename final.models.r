@@ -11,14 +11,12 @@ graphics.off() # close all open graphics windows
 
 # Packages that may be needed, remove the # to install
 
-#install.packages("arm")
-#install.packages("lme4")
-#install.packages("MuMIn")
-#install.packages("car")
+#install.packages("glmmTMB")
+#install.packages("bbmle")
 #install.packages("ggplot2")
 #install.packages("sjPlot")
-#install.packages("MASS")
-#install.packages("LMERConvenienceFunctions")
+#install.packages("effects")
+#install.packages("MuMIn")
 
 
 #################################################################################
@@ -39,65 +37,57 @@ dframe2 <- subset(dframe1, period == "experiment" & glasshouse_temperatue_settin
 #### just use one to represent bee movement
 cor.test (dframe2$bees_out, dframe2$bees_in)
 
-## Model 1----
+#############################
+####  Model 1 ###############
+#############################
 
-# Relationship between worker movement and glasshouse temperature
-# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
+# Relationship between worker movement, days spent in the glasshouse and glasshouse temperature
+# plus Experimental_group as a fixed effect, with hive ID and the treatment temperature from the previous day as random terms
 
-library(lme4)
-library(MASS)
-final.model1 <- glmer.nb(bees_out  ~                            # count dependent variable
-                             temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
-                             Experimental_group +                          # fixed term
-                             temperature_glasshouse_ibutton_01:Experimental_group + # interaction term 
-                             (1|experiment_day) + (1|hive),   # the random terms - hive ID and experiment day
-                           na.action = na.pass, nAGQ = 1, 
-                           data = dframe2)                       # negative bionomial model of count data 
-
-summary(final.model1) #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-# Standardise the global model's parameters so that SD = 0.5,
-# to make them directly comparable despite them being measured on different scales
-
-library(arm)                                    
-stdz.final.model1 <- standardize(final.model1, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.final.model1)
+library(glmmTMB)
+library(bbmle) 
+final.model1 <- glmmTMB(bees_out  ~                          # count dependent variable
+                            Experimental_group +                 # categorical variable   
+                            temperature_glasshouse_ibutton_01 +  # continuous explanatory variable
+                            days_in_glasshouse +                 # continuous explanatory variable
+                            temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term 
+                          + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                          family = "nbinom1", na.action = "na.pass", # negative binomial model of count data 
+                          data = dframe2)                       
+summary(final.model1)
 
 # R-squared 
 
 library(MuMIn)
-r.squaredGLMM(stdz.final.model1)
+r.squaredGLMM(final.model1)
 
 
 ## summary table
 library(sjPlot)
-tab_model(stdz.final.model1, show.est = TRUE, show.se = TRUE, show.stat = TRUE)
+tab_model(final.model1, show.est = TRUE, show.se = TRUE, show.stat = TRUE)
 
 ## check residuals
-plot(stdz.final.model1, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(stdz.final.model1, type = "pearson")
+sresid <- resid(final.model1, type = "pearson")
 hist(sresid)
 
 ### description of final model paramters
-print(stdz.final.model1, corr = F)
-
-library(LMERConvenienceFunctions)
-plotLMER.fnc(stdz.final.model1) # influence of individual explanatory variables
+print(final.model1, corr = F)
 
 
-## Figures model 1 ----
+#############################
+## Plotting model 1 output
+#############################
+
 
 library(ggplot2)
 library(sjPlot)
+library(effects)
 
-## Plotting model 1 output
-
+### the modelled impact of temperature on worker movement
 
 ww1 <- theme_set(theme_bw())
 ww2 <- plot_model(final.model1, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Experimental_group"))
-ww3 <- ww2 + labs(color = "Experimental_group")
+ww3 <- ww2 + labs(color = "Experimental group")
 ww4 <- ww3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.height = unit(1, 'cm'), #change legend key height
                    legend.key.width = unit(1, 'cm'), #change legend key width
@@ -127,63 +117,165 @@ ww15
 dev.off()
 
 
-#################################################################
+### the modeled impact of number of days in the glasshouse on worker movement
 
-## Model 2----
+qqq1 <- theme_set(theme_bw())
+qqq2 <- plot_model(final.model1, type = "pred", terms = c("days_in_glasshouse [all]", "Experimental_group"))
+qqq3 <- qqq2 + labs(color = "Experimental group")
+qqq4 <- qqq3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
+                     legend.key.height = unit(1, 'cm'), #change legend key height
+                     legend.key.width = unit(1, 'cm'), #change legend key width
+                     legend.title = element_text(size=15), #change legend title font size
+                     legend.text = element_text(size=10)) 
+qqq5 <- qqq4 + geom_line(linewidth = 2)
+qqq6 <- qqq5 + ylab("Worker movement")
+qqq7 <- qqq6 + xlab("Number of days in the glasshouse")
+qqq10 <- qqq7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
+qqq11 <- qqq10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
+  theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
+qqq12 <- qqq11 + theme(axis.title.x=element_text(face="bold", size=15, vjust=1.5))
+qqq13 <- qqq12 + theme(plot.title = element_text(color="black", size=18, face="bold"))
+qqq14 <- qqq13 + ggtitle("") ## blanking top title
+qqq15 <- qqq14 + theme(strip.text.x = element_text(face="bold", size=15, colour = "black"))
+qqq15
 
-# Relationship between hive temperature and glasshouse temperature
-# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
 
-library(lme4)
-final.model2 <- glmer(temperature_C_hive_ibutton_01  ~                 # the dependent variable
-                          temperature_glasshouse_ibutton_01 + Experimental_group +   # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +    # interaction terms
-                          (1|experiment_day) + (1|hive),                   # the random terms 
-                        family = gaussian (link = identity),
-                        na.action = na.pass,
-                        data = dframe2) # gaussian model of temperature data 
+### exporting high res image
+# PDF
+pdf(file = "Figure_S8_Worker_movement_vs_days.pdf", width = 10, height = 6, family = "Helvetica")
+qqq15
+dev.off()
 
+# TIFF
+tiff("Figure_S8_Worker_movement_vs_days.tiff", height = 12, width = 21, units = 'cm', res = 300)
+qqq15
+dev.off()
+
+
+### the modelled impact on bee worker movement of the interaction between 
+### glasshouse temperature and the number of days in the glasshouse
+
+ppp1 <- theme_set(theme_bw())
+ppp2 <- plot_model(final.model1, type = "int")
+ppp3 <- ppp2 + labs(color = "Days in glasshouse")
+ppp4 <- ppp3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
+                     legend.key.height = unit(1, 'cm'), #change legend key height
+                     legend.key.width = unit(1, 'cm'), #change legend key width
+                     legend.title = element_text(size=15), #change legend title font size
+                     legend.text = element_text(size=10)) 
+ppp5 <- ppp4 + geom_line(linewidth = 2)
+ppp6 <- ppp5 + ylab("Worker movement")
+ppp7 <- ppp6 + xlab("Glasshouse temperature (°C)")
+ppp10 <- ppp7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
+ppp11 <- ppp10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
+  theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
+ppp12 <- ppp11 + theme(axis.title.x=element_text(face="bold", size=15, vjust=1.5))
+ppp13 <- ppp12 + theme(plot.title = element_text(color="black", size=18, face="bold"))
+ppp14 <- ppp13 + ggtitle("") ## blanking top title
+ppp15 <- ppp14 + theme(strip.text.x = element_text(face="bold", size=15, colour = "black"))
+ppp15
+
+
+### exporting high res image
+# PDF
+pdf(file = "Figure_S9_Worker_movement_vs_interaction.pdf", width = 10, height = 6, family = "Helvetica")
+ppp15
+dev.off()
+
+# TIFF
+tiff("Figure_S9_Worker_movement_vs_interaction.tiff", height = 12, width = 21, units = 'cm', res = 300)
+ppp15
+dev.off()
+
+
+
+#############################
+####  Model 2 ###############
+#############################
+
+# Relationship between hive temperature, days spent in the glasshouse and glasshouse temperature
+# plus Experimental_group as a fixed effect, with hive ID and the treatment temperature from the previous day as random terms
+
+library(glmmTMB)
+library(bbmle) 
+final.model2 <- glmmTMB (temperature_C_hive_ibutton_01  ~                 # the continuous dependent variable
+                             Experimental_group +                           # categorical variable  
+                             temperature_glasshouse_ibutton_01 +            # continuous explanatory variable
+                             days_in_glasshouse +                           # continuous explanatory variable
+                             temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term
+                           + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                           family = "gaussian", na.action = "na.pass",      # gaussian model for continuous variable
+                           data = dframe2)            
 summary(final.model2) 
-
-
-library(arm)                                    
-stdz.final.model2 <- standardize(final.model2, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.final.model2)
 
 
 # R-squared 
 library(MuMIn)
-r.squaredGLMM(stdz.final.model2)
+r.squaredGLMM(final.model2)
 
 ## summary table
 library(sjPlot)
-tab_model(stdz.final.model2, show.est = TRUE, show.se = TRUE, show.stat = TRUE)
+tab_model(final.model2, show.est = TRUE, show.se = TRUE, show.stat = TRUE)
 
 
-## inspect residuals
-plot(stdz.final.model2, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
-sresid <- resid(stdz.final.model2, type = "pearson")
+sresid <- resid(final.model2, type = "pearson")
 hist(sresid)
 
-### description of final model paramters
-print(stdz.final.model2, corr = F)
-
-library(LMERConvenienceFunctions)
-plotLMER.fnc(stdz.final.model2) # influence of individual explanatory variables
+### description of final model parameters
+print(final.model2, corr = F)
 
 
-## Figures model 2 ----
+
+#############################
+## Plotting model 2 output
+#############################
 
 library(ggplot2)
 library(sjPlot)
+library(effects)
 
-## Plotting model 2 output
+
+### the modeled impact on colony brood temperature of the interaction between 
+### glasshouse temperature and the number of days in the glasshouse
+
+vvv1 <- theme_set(theme_bw())
+vvv2 <- plot_model(final.model2, type = "int")
+vvv3 <- vvv2 + labs(color = "Days in glasshouse")
+vvv4 <- vvv3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
+                     legend.key.height = unit(1, 'cm'), #change legend key height
+                     legend.key.width = unit(1, 'cm'), #change legend key width
+                     legend.title = element_text(size=15), #change legend title font size
+                     legend.text = element_text(size=10)) 
+vvv5 <- vvv4 + geom_line(linewidth = 2)
+vvv6 <- vvv5 + ylab("Colony brood temperature (°C)")
+vvv7 <- vvv6 + xlab("Glasshouse temperature (°C)")
+vvv10 <- vvv7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
+vvv11 <- vvv10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
+  theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
+vvv12 <- vvv11 + theme(axis.title.x=element_text(face="bold", size=15, vjust=1.5))
+vvv13 <- vvv12 + theme(plot.title = element_text(color="black", size=18, face="bold"))
+vvv14 <- vvv13 + ggtitle("") ## blanking top title
+vvv15 <- vvv14 + theme(strip.text.x = element_text(face="bold", size=15, colour = "black"))
+vvv15
+
+### exporting high res image
+# PDF
+pdf(file = "Figure_2_Brood_temperature.pdf", width = 10, height = 6, family = "Helvetica")
+vvv15
+dev.off()
+
+# TIFF
+tiff("Figure_2_Brood_temperature.tiff", height = 12, width = 21, units = 'cm', res = 300)
+vvv15
+dev.off()
+
+
+
+### the modeled impact of glasshouse temperature on brood temperature
 
 zz1 <- theme_set(theme_bw())
 zz2 <- plot_model(final.model2, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Experimental_group"))
-zz3 <- zz2 + labs(color = "Experimental_group")
+zz3 <- zz2 + labs(color = "Experimental group")
 zz4 <- zz3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
                    legend.key.height = unit(1, 'cm'), #change legend key height
                    legend.key.width = unit(1, 'cm'), #change legend key width
@@ -203,23 +295,48 @@ zz15
 
 ### exporting high res image
 # PDF
-pdf(file = "Figure_2_Brood_temperature.pdf", width = 10, height = 6, family = "Helvetica")
+pdf(file = "Figure_S11_Brood_temperature_vs_glasshouse_temp.pdf", width = 10, height = 6, family = "Helvetica")
 zz15
 dev.off()
 
 # TIFF
-tiff("Figure_2_Brood_temperature.tiff", height = 12, width = 21, units = 'cm', res = 300)
+tiff("Figure_S11_Brood_temperature_vs_glasshouse_temp.tiff", height = 12, width = 21, units = 'cm', res = 300)
 
 zz15
 dev.off()
 
 
 
+### the modeled impact on colony brood temperature of the interaction between 
+### glasshouse temperature and the number of days in the glasshouse, displaying all days
 
-## Model 3----
+
+
+lll1 <- plot(predictorEffect("temperature_glasshouse_ibutton_01", final.model2),
+        type = "response", 
+        xlab="Glasshouse temperature (°C)", ylab="Colony brood temperature (°C)", 
+        main="The interaction between glasshouse temperature and number of days spent in the glasshouse")
+lll1
+
+### exporting high res image
+# PDF
+pdf(file = "Figure_S12_Brood_temperature_vs_temperature_days.pdf", width = 15, height = 6, family = "Helvetica")
+lll1
+dev.off()
+
+# TIFF
+tiff("Figure_S12_Brood_temperature_vs_temperature_days.tiff", height = 12, width = 30, units = 'cm', res = 300)
+lll1
+dev.off()
+
+
+
+#############################
+####  Model 3 ###############
+#############################
 
 # Relationship between hive humidity and glasshouse temperature
-# plus Experimental_group as a fixed effect, with hive and experimental day as random terms
+# plus Experimental_group as a fixed effect, with hive ID and the treatment temperature from the previous day as random terms
 
 ## exclude hive_02 as it's humidity readings don't seem to have worked
 dframe2a <- subset(dframe2, hive != "hive_02")
@@ -227,27 +344,17 @@ dframe2a <- subset(dframe2, hive != "hive_02")
 neg_sqrt_humidity <- sqrt(max(dframe2a$humidity_percentage_hive_ibutton_01+1) - dframe2a$humidity_percentage_hive_ibutton_01) 
 
 
-library(lme4)
-final.model3 <- glmer(neg_sqrt_humidity ~                             # the dependent variable - neg. sqrt humidity
-                          temperature_glasshouse_ibutton_01 +             # interaction terms
-                          Experimental_group +                                     # fixed term
-                          temperature_glasshouse_ibutton_01:Experimental_group +   # interaction terms
-                          (1|experiment_day) + (1|hive),                  # the random terms 
-                        family = gaussian (link = identity),
-                        control=glmerControl(optimizer="Nelder_Mead",   # Nedler_Mead optimiser aided convergence    
-                                             optCtrl=list(maxfun=2e5)), 
-                        na.action = na.pass,
-                        data = dframe2a)            # gaussian model of humidity data 
 
-summary(final.model3)  #the warning message here suggests we have a scaling issue, need to standardise variablies
-
-# Standardise the global model's parameters so that SD = 0.5,
-# to make them directly comparable despite them being measured on different scales
-
-library(arm)                                    
-stdz.final.model3 <- standardize(final.model3, standardize.y = FALSE)
-#adjusts variables going in so the parameter estimates will be comparable
-summary(stdz.final.model3)
+library(glmmTMB)
+library(bbmle) 
+final.model3 <- glmmTMB(neg_sqrt_humidity ~                          # the dependent variable - neg. sqrt humidity
+                            temperature_glasshouse_ibutton_01 +         # continuous explanatory variable
+                            days_in_glasshouse +                        # continuous explanatory variable
+                            temperature_glasshouse_ibutton_01:days_in_glasshouse  # interaction term
+                          + (1|hive) + (1|previous_day_treatment_temperature_C),  # the random terms
+                          family = "gaussian", na.action = "na.pass", 
+                          data = dframe2a)            # gaussian model of humidity data 
+summary(final.model3)  
 
 
 # R-squared 
@@ -256,65 +363,65 @@ r.squaredGLMM(final.model3)
 
 ## summary table
 library(sjPlot)
-tab_model(stdz.final.model3, show.est = TRUE, show.se = TRUE, show.stat = TRUE)
+tab_model(final.model3, show.est = TRUE, show.se = TRUE, show.stat = TRUE)
 
 ## check residuals
-plot(final.model3, pch = 20, col = "black", lty = "dotted") # fitted values against the residuals
-
 sresid <- resid(final.model3, type = "pearson")
 hist(sresid)
 
 ### description of final model paramters
-print(stdz.final.model3, corr = F)
-
-library(LMERConvenienceFunctions)
-plotLMER.fnc(stdz.final.model3) # influence of individual explanatory variables
+print(final.model3, corr = F)
 
 
-## Figures model 3 ----
+#############################
+## Plotting model 3 output
+#############################
 
 library(ggplot2)
 library(sjPlot)
+library(effects)
 
 
 
-## Plotting model 3 output
-
-ff1 <- theme_set(theme_bw())
-ff2 <- plot_model(final.model3, type = "pred", terms = c("temperature_glasshouse_ibutton_01 [all]", "Experimental_group"))
-ff3 <- ff2 + labs(color = "Experimental_group")
-ff4 <- ff3 + theme(legend.key.size = unit(1, 'cm'), #change legend key size
-                   legend.key.height = unit(1, 'cm'), #change legend key height
-                   legend.key.width = unit(1, 'cm'), #change legend key width
-                   legend.title = element_text(size=15), #change legend title font size
-                   legend.text = element_text(size=10)) 
-ff5 <- ff4 + geom_line(linewidth = 2)
-ff6 <- ff5 + ylab("Neg_RH")
-ff7 <- ff6 + xlab("Glasshouse temperature (°C)")
-ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=18, vjust=1.5))
-ff11 <- ff10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
-  theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
-ff12 <- ff11 + theme(axis.title.x=element_text(face="bold", size=15, vjust=1.5))
-ff13 <- ff12 + theme(plot.title = element_text(color="black", size=18, face="bold"))
-ff14 <- ff13 + ggtitle("") ## blanking top title
-ff15 <- ff14 + theme(strip.text.x = element_text(face="bold", size=15, colour = "black"))
-ff15
+nnn1 <- plot(Effect(focal.predictors = c("temperature_glasshouse_ibutton_01"), 
+            mod=final.model3),
+            type = "response", 
+            ylab="Neg RH", 
+            xlab="Glasshouse temperature (°C)")
+nnn1
 
 ### exporting high res image
 # PDF
-pdf(file = "Figure_3_Humidity.pdf", width = 10, height = 6, family = "Helvetica")
-ff15
+pdf(file = "Figure_3_Neg_RH_vs_temperature.pdf", width = 8, height = 6, family = "Helvetica")
+nnn1
 dev.off()
 
 # TIFF
-tiff("Figure_3_Humidity.tiff", height = 12, width = 21, units = 'cm', res = 300)
-ff10 <- ff7 + theme(axis.title.y=element_text(face="bold", size=15, vjust=1.5))
-ff11 <- ff10 +  theme(axis.text.x=element_text(face="bold", size=15, vjust=1.5, colour = "black")) +
-  theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
-ff12 <- ff11 + theme(axis.title.x=element_text(face="bold", size=15, vjust=1.5))
-ff13 <- ff12 + theme(plot.title = element_text(color="black", size=18, face="bold"))
-ff14 <- ff13 + ggtitle("") ## blanking top title
-ff15 <- ff14 + theme(strip.text.x = element_text(face="bold", size=15, colour = "black"))
-ff15
+tiff("Figure_3_Neg_RH_vs_temperature.tiff", height = 12, width = 16, units = 'cm', res = 300)
+nnn1
+dev.off()
+
+
+
+### the modeled impact on Neg_RH of the interaction between 
+### glasshouse temperature and the number of days in the glasshouse, displaying all days
+
+
+
+mmm1 <- plot(predictorEffect("temperature_glasshouse_ibutton_01", final.model3),
+             type = "response", 
+             xlab="Glasshouse temperature (°C)", ylab="Neg RH", 
+             main="The interaction between between glasshouse temperature and number of days spent in the glasshouse")
+mmm1
+
+### exporting high res image
+# PDF
+pdf(file = "Figure_S13_Neg_RH_vs_temperature_days.pdf", width = 15, height = 6, family = "Helvetica")
+mmm1
+dev.off()
+
+# TIFF
+tiff("Figure_S13_Neg_RH_vs_temperature_days.tiff", height = 12, width = 30, units = 'cm', res = 300)
+mmm1
 dev.off()
 
